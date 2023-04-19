@@ -1,8 +1,5 @@
-Shader "Unlit/GridDisplay"
+Shader "GridBuilder/GridDisplay"
 {
-    Properties
-    {
-    }
 
     SubShader
     {
@@ -31,7 +28,7 @@ Shader "Unlit/GridDisplay"
 
             fixed4 fragmentFunc(v2f i) : COLOR
             {
-                return fixed4(1, 1, 1, 1);
+             //   return fixed4(1, 1, 1, 1);
                 return i.color;
 
             }

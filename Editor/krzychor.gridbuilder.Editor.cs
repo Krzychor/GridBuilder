@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -25,39 +26,63 @@ public class GridGeneratorEditor : EditorWindow
     {
         Building oldBuilding = building;
 
-        cellSize = EditorGUILayout.FloatField("cell size", cellSize);
-        epsilon = EditorGUILayout.FloatField("epsilon", epsilon);
-        building = (Building)EditorGUILayout.ObjectField("building", building, typeof(Building), true);
-        floor = (GameObject)EditorGUILayout.ObjectField("floor", floor, typeof(GameObject), true);
-        EditorGUILayout.ObjectField("G", G, typeof(GameObject), true);
-
-        if (G == null && building != null)
+        if(IsScanSceneReady())
         {
-            RefreshDisplay();
-        }
+            cellSize = EditorGUILayout.FloatField("cell size", cellSize);
+            epsilon = EditorGUILayout.FloatField("epsilon", epsilon);
+            building = (Building)EditorGUILayout.ObjectField("building", building, typeof(Building), true);
 
-        if(building != null && building != oldBuilding)
-        {
-            RefreshDisplay();  
-        }
+            if (oldBuilding != building)
+                CreateNewModel();
 
-        if (building == null && G != null)
-        {
-            DestroyImmediate(G);
-            G = null;
+            if (building != null)
+            {
+                if (GUILayout.Button("Generate"))
+                    Generate();
+            }
+            
         }
+        else
+        {
+            if(CanOpenScanScene())
+            {
+                if (GUILayout.Button("Open"))
+                {
+                    CreateScene();
+                }
+            }
+            else
+            {
+                EditorGUILayout.LabelField("Save open scenes");
+            }
+        }
+        
 
-        if (GUILayout.Button("Generate"))
-        {
-            Generate();
-        }
     }
 
-    private void RefreshDisplay()
+    private void CreateNewModel()
     {
         if (G != null)
             DestroyImmediate(G);
-        G = Instantiate(building.model, Vector3.zero, Quaternion.identity);
+
+        if(building != null)
+        {
+            gridInstance = new BuildingGridInstance(building.grid);
+            G = Instantiate(building.model, Vector3.zero, gridInstance.GetRotation());
+        }
+
+        GenerateTiles();
+    }
+
+    private void RefreshModel()
+    {
+        if (G != null)
+            DestroyImmediate(G);
+
+        if (building != null)
+        {
+            G = Instantiate(building.model, Vector3.zero, gridInstance.GetRotation());
+        }
 
         GenerateTiles();
     }
@@ -87,22 +112,48 @@ public class GridGeneratorEditor : EditorWindow
         return boundsList;
     }
 
+    private bool CanOpenScanScene()
+    {
+        for(int i = 0; i < EditorSceneManager.loadedSceneCount; i++)
+            if(EditorSceneManager.GetSceneAt(i).isDirty == true)
+                return false;
+        return true;
+    }
+
+    private bool IsScanSceneReady()
+    {
+        return EditorSceneManager.loadedSceneCount == 1 && EditorSceneManager.GetSceneAt(0).name == "Scanner";
+    }
+
+    private void CreateScene()
+    {
+        var newScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        newScene.name = "Scanner";
+
+        floor = new GameObject("floor");
+        MeshCollider collider = floor.AddComponent<MeshCollider>();
+        MeshFilter filter = floor.AddComponent<MeshFilter>();
+        MeshRenderer renderer = floor.AddComponent<MeshRenderer>();
+        renderer.material = new Material(Shader.Find("GridBuilder/GridDisplay"));
+        floor.hideFlags = HideFlags.HideAndDontSave;
+
+    }
 
     private void Generate()
     {
         if (G != null)
             DestroyImmediate(G);
         G = Instantiate(building.model, new Vector3(), Quaternion.Euler(0, 0, 0));
+        G.hideFlags = HideFlags.DontSave;
         Collider[] colls = G.GetComponentsInChildren<Collider>(true);
-        //      G.transform.rotation = Quaternion.Euler(0, -90 * building.grid.rotation, 0);
         G.transform.rotation = Quaternion.identity;
         Bounds bounds = colls[0].bounds;
         for (int i = 1; i < colls.Length; i++)
             bounds.Encapsulate(colls[i].bounds);
 
         max = GetSize(bounds);
-        Debug.Log("size = " + max);
         BuildingGridTemplate bg = new BuildingGridTemplate(max, CreateBoundsList());
+        gridInstance = new BuildingGridInstance(bg);
 
         floor.GetComponentInChildren<Collider>().enabled = false;
         for (int x = 0; x < max.x; x++)
@@ -166,10 +217,13 @@ public class GridGeneratorEditor : EditorWindow
         if (building == null)
             return;
 
+        if (IsScanSceneReady() == false)
+            return;
+
         if(Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.R)
         {
             gridInstance.RotateRight();
-            RefreshDisplay();
+            RefreshModel();
             return;
         }
 
@@ -213,6 +267,13 @@ public class GridGeneratorEditor : EditorWindow
 
     private void GenerateTiles(bool onlyOccupied = false)
     {
+        if(building == null)
+        {
+            floor.GetComponent<MeshFilter>().sharedMesh = null;
+            floor.GetComponent<MeshCollider>().sharedMesh = null;
+            return;
+        }
+
         var mesh = new Mesh
         {
             name = "Procedural Mesh"
