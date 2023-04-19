@@ -1,11 +1,11 @@
 {
   "name": "com.krzychor.gridbuilder",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "displayName": "Grid Builder",
-  "description": "This is an example package",
+  "description": "This package provide simple grid builder, for more information check https://github.com/Krzychor/GridBuilder",
   "unity": "2021.3",
   "unityRelease": "0b5",
-  "documentationUrl": "https://example.com/",
+  "documentationUrl": "https://github.com/Krzychor/GridBuilder",
   "changelogUrl": "https://example.com/changelog.html",
   "licensesUrl": "https://example.com/licensing.html",
   "dependencies": {
