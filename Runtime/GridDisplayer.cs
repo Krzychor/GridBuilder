@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using static UnityEditor.PlayerSettings;
 
 public class GridDisplayer : MonoBehaviour
 {
@@ -10,6 +11,8 @@ public class GridDisplayer : MonoBehaviour
     public float lineHeight = 0.1f;
     public Color linesColor = Color.blue;
 
+    [SerializeField]
+    public LayerMask terrainMask;
     public LineRenderer[] gridLines = null;
 
 
@@ -22,7 +25,6 @@ public class GridDisplayer : MonoBehaviour
 
     public void PrepareGridLines()
     {
-        Debug.Log("PrepareGridLines");
         if (gridLines.Length == 2)
         {
             Destroy(gridLines[0].gameObject);
@@ -43,7 +45,7 @@ public class GridDisplayer : MonoBehaviour
         gridLines[1] = G.AddComponent<LineRenderer>();
         PrepareGridVertical(gridLines[1]);
 
-        if(enabled == false)
+        if (enabled == false)
         {
             gridLines[0].enabled = false;
             gridLines[1].enabled = false;
@@ -74,33 +76,37 @@ public class GridDisplayer : MonoBehaviour
 
     void PrepareGridHorizontal(LineRenderer renderer)
     {
-        Vector3[] positions = new Vector3[grid.size + grid.size + 1 + 1];
-        int index = 0;
+        List<Vector3> positions = new();
         Vector3 pos = new Vector3(0, lineHeight, 0) + grid.GetPosition();
 
         bool goUp = false;
         int dir = 1;
-        for (int j = 0; j < grid.size + grid.size + 1; j++)
+        for (int i = 0; i < grid.size + grid.size + 1; i++)
         {
+            pos.y = SampleHeight(pos.x, pos.z) + lineHeight;
+            positions.Add(pos);
+
             if (!goUp)
             {
-                positions[index] = pos;
-                pos.x += dir * grid.cellSize * grid.size;
+                for(int j = 0; j < grid.size; j++)
+                {
+                    pos.x += dir * grid.cellSize;
+                    pos.y = SampleHeight(pos.x, pos.z) + lineHeight;
+                    positions.Add(pos);
+                }
                 dir *= -1;
             }
             else
             {
-                positions[index] = pos;
                 pos.z += grid.cellSize;
             }
             goUp = !goUp;
-            index++;
-
         }
-        positions[index] = pos;
+        pos.y = SampleHeight(pos.x, pos.z) + lineHeight;
+        positions.Add(pos);
 
-        renderer.positionCount = positions.Length;
-        renderer.SetPositions(positions);
+        renderer.positionCount = positions.Count;
+        renderer.SetPositions(positions.ToArray());
         renderer.startColor = linesColor;
         renderer.endColor = linesColor;
         renderer.widthMultiplier = lineWidth;
@@ -108,36 +114,49 @@ public class GridDisplayer : MonoBehaviour
 
     void PrepareGridVertical(LineRenderer renderer)
     {
-        Vector3[] positions = new Vector3[grid.size + grid.size + 1 + 1];
-        int index = 0;
+        List<Vector3> positions = new();
         Vector3 pos = new Vector3(0, lineHeight, 0) + grid.GetPosition();
 
         bool goUp = false;
         int dir = 1;
-        for (int j = 0; j < grid.size + grid.size + 1; j++)
+        for (int i = 0; i < grid.size + grid.size + 1; i++)
         {
+            pos.y = SampleHeight(pos.x, pos.z) + lineHeight;
+            positions.Add(pos);
+
             if (!goUp)
             {
-                positions[index] = pos;
-                pos.z += dir * grid.cellSize * grid.size;
+                for (int j = 0; j < grid.size; j++)
+                {
+                    pos.z += dir * grid.cellSize;
+                    pos.y = SampleHeight(pos.x, pos.z) + lineHeight;
+                    positions.Add(pos);
+                }
                 dir *= -1;
             }
             else
             {
-                positions[index] = pos;
                 pos.x += grid.cellSize;
             }
             goUp = !goUp;
-            index++;
-
         }
-        positions[index] = pos;
+        pos.y = SampleHeight(pos.x, pos.z) + lineHeight;
+        positions.Add(pos);
 
-        renderer.positionCount = positions.Length;
-        renderer.SetPositions(positions);
+        renderer.positionCount = positions.Count;
+        renderer.SetPositions(positions.ToArray());
         renderer.startColor = linesColor;
         renderer.endColor = linesColor;
         renderer.widthMultiplier = lineWidth;
     }
 
+    float SampleHeight(float worldPosX, float worldPosZ)
+    {
+        if (Physics.Raycast(new Vector3(worldPosX, grid.maxHeight, worldPosZ), Vector3.down, 
+            out RaycastHit hit, grid.maxHeight - grid.transform.position.y, terrainMask))
+        {
+            return hit.point.y;
+        }
+        return grid.transform.position.y;
+    }
 }

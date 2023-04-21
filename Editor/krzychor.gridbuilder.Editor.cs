@@ -68,7 +68,9 @@ public class GridGeneratorEditor : EditorWindow
         if(building != null)
         {
             gridInstance = new BuildingGridInstance(building.grid);
-            G = Instantiate(building.model, Vector3.zero, gridInstance.GetRotation());
+            G = PrefabUtility.InstantiatePrefab(building.model) as GameObject;
+            G.transform.position = Vector3.zero;
+            G.transform.rotation = gridInstance.GetRotation();
         }
 
         GenerateTiles();
@@ -81,7 +83,9 @@ public class GridGeneratorEditor : EditorWindow
 
         if (building != null)
         {
-            G = Instantiate(building.model, Vector3.zero, gridInstance.GetRotation());
+            G = PrefabUtility.InstantiatePrefab(building.model) as GameObject;
+            G.transform.position = Vector3.zero;
+            G.transform.rotation = gridInstance.GetRotation();
         }
 
         GenerateTiles();
@@ -90,25 +94,15 @@ public class GridGeneratorEditor : EditorWindow
     List<Bounds> CreateBoundsList()
     {
         List<Bounds> boundsList = new List<Bounds>();
-        Quaternion rotation = Quaternion.Euler(0, 0, 0);
-        GameObject gameobject = Instantiate(building.model, new Vector3(), rotation);
-        boundsList.Add(CalculateBounds());
-        DestroyImmediate(gameobject);
 
-        rotation = Quaternion.Euler(0, -90, 0);
-        gameobject = Instantiate(building.model, new Vector3(), rotation);
-        boundsList.Add(CalculateBounds());
-        DestroyImmediate(gameobject);
-
-        rotation = Quaternion.Euler(0, -180, 0);
-        gameobject = Instantiate(building.model, new Vector3(), rotation);
-        boundsList.Add(CalculateBounds());
-        DestroyImmediate(gameobject);
-
-        rotation = Quaternion.Euler(0, -270, 0);
-        gameobject = Instantiate(building.model, new Vector3(), rotation);
-        boundsList.Add(CalculateBounds());
-        DestroyImmediate(gameobject);
+        gridInstance.SetRotation(0);
+        for (int i = 0; i < 4; i++)
+        {
+            GameObject gameobject = Instantiate(building.model, new Vector3(), gridInstance.GetRotation());
+            boundsList.Add(CalculateBounds());
+            DestroyImmediate(gameobject);
+            gridInstance.RotateRight();
+        }
         return boundsList;
     }
 
@@ -130,21 +124,22 @@ public class GridGeneratorEditor : EditorWindow
         var newScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         newScene.name = "Scanner";
 
+        CreateFloorObject();
+        CreateNewModel();
+    }
+
+    private void CreateFloorObject()
+    {
         floor = new GameObject("floor");
         MeshCollider collider = floor.AddComponent<MeshCollider>();
         MeshFilter filter = floor.AddComponent<MeshFilter>();
         MeshRenderer renderer = floor.AddComponent<MeshRenderer>();
         renderer.material = new Material(Shader.Find("GridBuilder/GridDisplay"));
         floor.hideFlags = HideFlags.HideAndDontSave;
-
     }
 
     private void Generate()
     {
-        if (G != null)
-            DestroyImmediate(G);
-        G = Instantiate(building.model, new Vector3(), Quaternion.Euler(0, 0, 0));
-        G.hideFlags = HideFlags.DontSave;
         Collider[] colls = G.GetComponentsInChildren<Collider>(true);
         G.transform.rotation = Quaternion.identity;
         Bounds bounds = colls[0].bounds;
@@ -174,6 +169,8 @@ public class GridGeneratorEditor : EditorWindow
 
     private void Update()
     {
+        if (floor == null)
+            CreateFloorObject();
         if (G != null)
         {
             if (Keyboard.current[Key.LeftShift].isPressed)
@@ -181,6 +178,9 @@ public class GridGeneratorEditor : EditorWindow
             else
                 G.SetActive(true);
         }
+
+     //   if (building != null && gridInstance.rotation == 0)
+     //      building.grid.shift = G.transform.position;
     }
 
     private void OnEnable()

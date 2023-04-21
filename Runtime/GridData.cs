@@ -13,6 +13,7 @@ public struct PlacedBuilding
 
 public class GridData : MonoBehaviour
 {
+    public float maxHeight = 10;
     public int size = 10;
     public float cellSize = 1;
 
@@ -33,22 +34,24 @@ public class GridData : MonoBehaviour
     public bool CanPlace(Vector3 point, BuildingGridInstance buildingGrid)
     {
         if (!IsInsideGrid(point))
-        {
             return false;
-        }
 
         Vector3Int cell = GetCell(point);
+        return CanPlace(cell.x, cell.z, buildingGrid);
+    }
 
+    public bool CanPlace(int cellX, int cellZ, BuildingGridInstance buildingGrid)
+    {
         Vector2Int min = buildingGrid.Min();
         Vector2Int max = buildingGrid.Max();
         for (int x = min.x; x <= max.x; x++)
             for (int z = min.y; z <= max.y; z++)
             {
-                if (IsInsideGrid(cell.x+x, cell.z+z))
+                if (IsInsideGrid(cellX + x, cellZ + z))
                 {
                     if (buildingGrid.Get(x, z) == true)
                     {
-                        if (placeable[cell.x+x, cell.z+z] == false)
+                        if (placeable[cellX + x, cellZ + z] == false)
                             return false;
                     }
                 }
@@ -127,7 +130,6 @@ public class GridData : MonoBehaviour
     public Vector3 GetCellWorldPosition(int x, int z)
     {
         Vector3 pos = new Vector3(cellSize * x, 0, cellSize * z) + GetPosition();
-
         return pos;
     }
 

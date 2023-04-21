@@ -25,7 +25,7 @@ public class SelectionPlacementAction : GridAction
         buildingGrid = new BuildingGridInstance(building.grid);
         displayer = InstancedBuilding.TryCreate(building, buildingGrid);
         if (displayer == null)
-            displayer = new GameObjectDisplayer(building, buildingGrid);
+            displayer = new GameObjectDisplayer(building, builder.transform);
     }
 
     public void Update()
@@ -37,7 +37,7 @@ public class SelectionPlacementAction : GridAction
 
     public void Cancel()
     {
-
+        displayer.OnDestroy();
     }
 
     public void OnStart()
@@ -50,25 +50,27 @@ public class SelectionPlacementAction : GridAction
         displayer.Clear();
         displayer.ReserveSize(table.x, table.y);
 
-        Vector3 buildingSize = new Vector3(buildingGrid.GetSize().x * builder.grid.cellSize, 0,
-            buildingGrid.GetSize().y * builder.grid.cellSize);
+        Vector2Int buildSizeInCells = buildingGrid.GetSize();
         int dirX = 1;
         int dirZ = 1;
-
-        Vector2Int buildSizeInCells = buildingGrid.GetSize();
         if (startIndex.x > endIndex.x)
             dirX = -1;
         if (startIndex.z > endIndex.z)
             dirZ = -1;
+        Vector3Int minCell = startIndex;
         for (int x = 0; x < table.x; x++)
             for (int z = 0; z < table.y; z++)
             {
-                Vector3 pos = builder.grid.GetCellWorldPosition(startIndex.x + dirX * x * buildSizeInCells.x,
-                    startIndex.z + dirZ * z * buildSizeInCells.y);
+                Vector3 pos = builder.grid.GetCellWorldPosition(
+                    minCell.x + dirX * x * buildSizeInCells.x + buildingGrid.GetCenter().x,
+                    minCell.z + dirZ * z * buildSizeInCells.y + buildingGrid.GetCenter().y);
+
+                Vector3 rayPos = new Vector3(pos.x, builder.camera.transform.position.y, pos.z);
+                if (Physics.Raycast(rayPos, Vector3.down, out RaycastHit hit, 900, builder.terrainMask))
+                    pos.y = hit.point.y;
+
                 if (builder.grid.CanPlace(pos, buildingGrid))
-                {
                     displayer.Add(pos);
-                }
             }
     }
 
@@ -86,16 +88,28 @@ public class SelectionPlacementAction : GridAction
         {
             if (raycast)
             {
+                Vector2Int buildingGridSize = buildingGrid.GetSize();
                 endIndex = builder.grid.GetCell(pos);
                 if (builder.grid.IsInsideGrid(endIndex.x, endIndex.z))
                 {
-                    Vector2Int size = new Vector2Int(Math.Abs(endIndex.x - startIndex.x), Math.Abs(endIndex.z - startIndex.z));
-                    Vector2Int table = new Vector2Int(size.x / buildingGrid.GetSize().x,
-                        size.y / buildingGrid.GetSize().y);
-                    if (table.x == 0)
-                        table.x = 1;
-                    if (table.y == 0)
-                        table.y = 1;
+                    Vector2Int size = new Vector2Int(Math.Abs(endIndex.x - startIndex.x),
+                        Math.Abs(endIndex.z - startIndex.z));
+                    Vector2Int table = new Vector2Int(size.x / buildingGridSize.x,
+                        size.y / buildingGridSize.y);
+
+                    table.x = Math.Max(1, table.x);
+                    table.y = Math.Max(1, table.y);
+
+                    if (table.x * buildingGrid.GetSize().x < size.x)
+                        table.x++;
+                    if (table.y * buildingGrid.GetSize().y < size.y)
+                        table.y++;
+                    if (endIndex.x < startIndex.x)
+                        table.x++;
+                    if (endIndex.z < startIndex.z)
+                        table.y++;
+
+
                     UpdateDisplay(table);
                 }
             }
@@ -154,6 +168,8 @@ public class SelectionPlacementAction : GridAction
         public void Add(Vector3 pos);
 
         public void Draw();
+
+        public void OnDestroy();
     }
 
     private class InstancedBuilding : BuildingDisplayer
@@ -242,6 +258,11 @@ public class SelectionPlacementAction : GridAction
             Matrix4x4 mat = Matrix4x4.TRS(pos, rotation, scale);
             matrices.Add(mat);
         }
+
+        public void OnDestroy()
+        {
+
+        }
     }
 
     private class GameObjectDisplayer: BuildingDisplayer
@@ -249,13 +270,17 @@ public class SelectionPlacementAction : GridAction
         List<Transform> objects = new();
         ObjectPool<GameObject> pool;
         Building building;
-        BuildingGridInstance grid;
 
-        public GameObjectDisplayer(Building building, BuildingGridInstance grid)
+        Transform poolParent;
+
+        public GameObjectDisplayer(Building building, Transform gridBuilder)
         {
+            poolParent = new GameObject().transform;
+            poolParent.SetParent(gridBuilder);
+            poolParent.gameObject.name = "massplacing pool";
+
             this.building = building;
-            this.grid = grid;
-            pool = new ObjectPool<GameObject>(OnCreateGameObject, OnTakeFromPool, OnReturnedToPool, OnDestroyPoolObject, 
+            pool = new ObjectPool<GameObject>(OnCreatePoolGameObject, OnTakeFromPool, OnReturnedToPool, OnDestroyPoolObject, 
                 false, defaultCapacity: 100, maxSize: 300);
         }
 
@@ -291,26 +316,31 @@ public class SelectionPlacementAction : GridAction
          //   objects.Count = sizeX * sizeZ;
         }
 
-        private GameObject OnCreateGameObject()
+        private GameObject OnCreatePoolGameObject()
         {
             if(building.preview != null)
-                return GameObject.Instantiate(building.preview);
-            return GameObject.Instantiate(building.model);
+                return GameObject.Instantiate(building.preview, poolParent);
+            return GameObject.Instantiate(building.model, poolParent);
         }
 
-        void OnReturnedToPool(GameObject obj)
+        private void OnReturnedToPool(GameObject obj)
         {
             obj.SetActive(false);
         }
 
-        void OnTakeFromPool(GameObject obj)
+        private void OnTakeFromPool(GameObject obj)
         {
             obj.SetActive(true);
         }
 
-        void OnDestroyPoolObject(GameObject obj)
+        private void OnDestroyPoolObject(GameObject obj)
         {
             GameObject.Destroy(obj);
+        }
+
+        public void OnDestroy()
+        {
+            GameObject.Destroy(poolParent.gameObject);
         }
     }
 

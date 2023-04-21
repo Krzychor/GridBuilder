@@ -68,15 +68,22 @@ public class PlaceAction : GridAction
             Place();
     }
 
-    void PlaceInCell(PlacementData data)
+    void PlaceInCell(PlacementData data, Vector3 point)
     {
-        data.buildingPreview.transform.position = builder.grid.GetPosition()
-        + new Vector3(data.cell.x * builder.grid.cellSize, 0, data.cell.z * builder.grid.cellSize);
+        Vector3 shift = data.rotatedGrid.template.boundsList[data.rotatedGrid.rotation].max;
+        Vector3 pos = builder.grid.GetPosition() + shift
+        + new Vector3(data.cell.x * builder.grid.cellSize, point.y, data.cell.z * builder.grid.cellSize);
+
+        if(Physics.Raycast(pos, Vector3.down, out RaycastHit hit, 90, builder.terrainMask))
+        {
+            pos.y = hit.point.y;
+        }
+        data.buildingPreview.transform.position = pos;
     }
 
     void Place()
     {
-        PlaceInCell(placementData);
+        PlaceInCell(placementData, placementData.buildingPreview.transform.position);
 
         GameObject placed = builder.grid.PlaceBuilding(placementData.building,
             placementData.buildingPreview.transform.position, placementData.rotatedGrid);
@@ -103,7 +110,7 @@ public class PlaceAction : GridAction
             {
                 placementData.cell = builder.grid.GetCell(point);
                 placementData.isValid = true;
-                PlaceInCell(placementData);
+                PlaceInCell(placementData, point);
 
                 RenderAsValid(placementData.buildingPreview);
             }

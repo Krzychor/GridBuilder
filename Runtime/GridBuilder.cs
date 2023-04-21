@@ -3,17 +3,15 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
-#if ENABLE_INPUT_SYSTEM
-#endif
-
 [RequireComponent(typeof(GridDisplayer))]
 public class GridBuilder : MonoBehaviour
 {
     public GridData grid { get; private set; }
     [SerializeField]
-    LayerMask buildingMask;
+    public LayerMask terrainMask;
     [SerializeField]
-    new Camera camera;
+    public new Camera camera;
+    public float raycastDistance = 1000.0f;
 
     public Action<GameObject, Building> onBuildingPlaced;
     GridDisplayer gridDisplayer;
@@ -66,16 +64,8 @@ public class GridBuilder : MonoBehaviour
 
     public Bounds CalculateBounds(GameObject G)
     {
-        Collider coll = G.GetComponentInChildren<Collider>(true/*include inactive*/);
+        Collider coll = G.GetComponentInChildren<Collider>(includeInactive: true);
         return coll.bounds;
-
-        Bounds bounds = new Bounds(transform.position, Vector3.one);
-        Renderer[] renderers = G.GetComponentsInChildren<Renderer>();
-        foreach (Renderer renderer in renderers)
-        {
-            bounds.Encapsulate(renderer.bounds);
-        }
-        return bounds;
     }
 
     public bool IsOverUI()
@@ -92,8 +82,7 @@ public class GridBuilder : MonoBehaviour
             return false;
 
         Ray ray = camera.ScreenPointToRay(Mouse.current.position.ReadValue());
-        float rayLenght = 1000.0f;
-        if (Physics.Raycast(ray, out RaycastHit hit, rayLenght, buildingMask))
+        if (Physics.Raycast(ray, out RaycastHit hit, raycastDistance, terrainMask))
         {
             pos = hit.point;
             return true;
@@ -108,9 +97,7 @@ public class GridBuilder : MonoBehaviour
             return null;
 
         Ray ray = camera.ScreenPointToRay(Mouse.current.position.ReadValue());
-        float rayLenght = 1000.0f;
-
-        if (Physics.Raycast(ray, out RaycastHit hit, rayLenght))
+        if (Physics.Raycast(ray, out RaycastHit hit, raycastDistance))
         {
             return hit.collider.gameObject;
         }

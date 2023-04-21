@@ -4,11 +4,10 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [Serializable]
-public struct BuildingGridTemplate
+public class BuildingGridTemplate
 {
     public Vector2Int gridSize;
     public bool[] grid;
-    public List<Vector3> shifts;
     public List<Bounds> boundsList;
     public Vector2Int defaultCenter;
 
@@ -18,7 +17,6 @@ public struct BuildingGridTemplate
         this.gridSize = size;
         grid = new bool[size.x * size.y];
         defaultCenter = size / 2;
-        shifts = new List<Vector3>();
     }
 
     public void Set1(int x, int z, bool value)
@@ -35,7 +33,7 @@ public struct BuildingGridTemplate
 
 public struct BuildingGridInstance
 {
-    BuildingGridTemplate template;
+    public BuildingGridTemplate template { get; private set; }
     public int rotation;
 
 
@@ -106,7 +104,10 @@ public struct BuildingGridInstance
         }
         catch
         {
-            Debug.LogError("failed for " + p.x +", " + p.y + " rot=" + rotation);
+            if(template == null)
+                Debug.LogError("failed for " + p.x +", " + p.y + " rot=" + rotation + "(null template!");
+            else
+                Debug.LogError("failed for " + p.x + ", " + p.y + " rot=" + rotation);
             Debug.Log("min=" + Min() + " center=" + GetCenter());
             Debug.Log("raw=" + x +"," + z );
             return false;
@@ -150,6 +151,13 @@ public struct BuildingGridInstance
     {
         rotation = (rotation+1)%4;
     }
+
+    public void SetRotation(int rotation)
+    {
+        this.rotation = rotation % 4;
+
+    }
+
 }
 
 
