@@ -1,23 +1,22 @@
 {
   "name": "com.krzychor.gridbuilder",
-  "version": "0.9.2",
+  "version": "0.9.3",
   "displayName": "Grid Builder",
   "description": "This package provide simple grid builder, for more information check https://github.com/Krzychor/GridBuilder",
   "unity": "2021.3",
   "unityRelease": "0b5",
   "documentationUrl": "https://github.com/Krzychor/GridBuilder",
   "changelogUrl": "https://example.com/changelog.html",
-  "licensesUrl": "https://example.com/licensing.html",
+  "licensesUrl": "https://github.com/Krzychor/GridBuilder/blob/main/LICENSE",
   "dependencies": {
     "com.unity.inputsystem": "1.4.4"
  },
  "keywords": [
     "keyword1",
-    "keyword2",
-    "keyword3"
+    "keyword2"
   ],
   "author": {
-    "name": "Unity",
+    "name": "Krzychor",
     "email": "unity@example.com",
     "url": "https://www.unity3d.com"
   }

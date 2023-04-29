@@ -15,8 +15,8 @@ public class GridBuilder : MonoBehaviour
 
     public Action<GameObject, Building> onBuildingPlaced;
     GridDisplayer gridDisplayer;
-
     GridAction currentAction;
+    bool isOverUI = false;
 
     public GridBuilderInput input;
 
@@ -74,9 +74,7 @@ public class GridBuilder : MonoBehaviour
 
     public bool IsOverUI()
     {
-        if(EventSystem.current != null)
-            return EventSystem.current.IsPointerOverGameObject();
-        return false;
+        return isOverUI;
     }
 
     public bool RaycastMouse(out Vector3 pos)
@@ -119,6 +117,10 @@ public class GridBuilder : MonoBehaviour
 
     private void Update()
     {
+        if (EventSystem.current != null)
+            isOverUI = EventSystem.current.IsPointerOverGameObject();
+        else
+            isOverUI = false;
         currentAction?.Update();
     }
 

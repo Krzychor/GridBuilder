@@ -86,6 +86,8 @@ public class GridData : MonoBehaviour
     public void Place(Vector3Int cell, BuildingGridInstance buildingGrid, Building building, GameObject gameObject)
     {
         PlacedBuilding newPlaced = gameObject.GetComponent<PlacedBuilding>();
+        if (newPlaced == null)
+            newPlaced = gameObject.AddComponent<PlacedBuilding>();
         newPlaced.cell = cell;
         newPlaced.grid = this;
         newPlaced.building = building;
