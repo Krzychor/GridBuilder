@@ -19,19 +19,19 @@ public class BuildingGridTemplate
         defaultCenter = size / 2;
     }
 
-    public void Set1(int x, int z, bool value)
+    public void Set(int x, int z, bool value)
     {
         grid[x + z * gridSize.x] = value;
     }
 
-    public bool Get1(int x, int z)
+    public bool Get(int x, int z)
     {
         return grid[x + z * gridSize.x];
     }
 
 }
 
-public struct BuildingGridInstance
+public class BuildingGridInstance
 {
     public BuildingGridTemplate template { get; private set; }
     public int rotation;
@@ -39,7 +39,7 @@ public struct BuildingGridInstance
 
     public Quaternion GetRotation()
     {
-        return Quaternion.Euler(0, -90 * rotation, 0);
+        return Quaternion.Euler(0, 90 * rotation, 0);
     }
 
     public Vector2Int GetCenter()
@@ -84,7 +84,7 @@ public struct BuildingGridInstance
         Vector2Int p = Unconvert(new Vector2Int(x, z));
         try
         {
-            template.Set1(p.x, p.y, value);
+            template.Set(p.x, p.y, value);
         }
         catch
         {
@@ -100,7 +100,7 @@ public struct BuildingGridInstance
         Vector2Int p = Unconvert(new Vector2Int(x, z));
         try
         {
-            return template.Get1(p.x, p.y);
+            return template.Get(p.x, p.y);
         }
         catch
         {

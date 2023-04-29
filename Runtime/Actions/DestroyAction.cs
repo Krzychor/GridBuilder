@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 
 
@@ -10,7 +9,7 @@ public class DestroyAction : GridAction
 {
     GridBuilder builder;
 
-    GameObject selected;
+    PlacedBuilding selected;
     public Material[] originalMaterials;
     public Material[] replacedMaterials;
 
@@ -33,32 +32,23 @@ public class DestroyAction : GridAction
     public void Update()
     {
         UpdateSelection();
-
-        if (Mouse.current.leftButton.wasPressedThisFrame)
-        {
-            builder.grid.Remove(selected);
-        }
     }
 
     void UpdateSelection()
     {
-        GameObject newSelected = builder.RaycastMouse();
-
-        if (newSelected != null)
-            newSelected = newSelected.transform.root.gameObject;
+        GameObject G = builder.RaycastMouse();
+        PlacedBuilding newSelected = G != null ? G.GetComponentInParent<PlacedBuilding>() : null;
 
         if (selected == newSelected)
             return;
 
-        if (newSelected == null)
-            selected = newSelected;
-        else if (builder.grid.TryFind(newSelected, out PlacedBuilding _))
-        {
-            RestoreMaterials(selected);
-            SetInvalidMaterial(newSelected);
-            selected = newSelected;
-        }
+        if (selected != null)
+            RestoreMaterials(selected.gameObject);
 
+        if (newSelected != null)
+            SetInvalidMaterial(newSelected.gameObject);
+
+        selected = newSelected;
     }
 
     void RestoreMaterials(GameObject building)
@@ -66,7 +56,6 @@ public class DestroyAction : GridAction
         if (building == null)
             return;
 
-        Debug.Log("restore for " + building);
         Renderer[] renderers = building.GetComponentsInChildren<Renderer>();
         for (int i = 0; i < renderers.Length; i++)
             renderers[i].material = originalMaterials[i];
@@ -91,6 +80,24 @@ public class DestroyAction : GridAction
         }
     }
 
+    public void OnClick(bool pressedDown, bool released)
+    {
+        if(pressedDown && selected != null)
+        {
+            GameObject.Destroy(selected.gameObject);
+            selected = null;
+        }
+    }
+
+    public void OnRotateLeft()
+    {
+
+    }
+
+    public void OnRotateRight()
+    {
+
+    }
 }
 
 

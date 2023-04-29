@@ -10,10 +10,11 @@ public class GridDisplayer : MonoBehaviour
     public float lineWidth = 0.1f;
     public float lineHeight = 0.1f;
     public Color linesColor = Color.blue;
-
     [SerializeField]
     public LayerMask terrainMask;
-    public LineRenderer[] gridLines = null;
+
+    LineRenderer gridLinesVert = null;
+    LineRenderer gridLinesHor = null;
 
 
 
@@ -25,53 +26,44 @@ public class GridDisplayer : MonoBehaviour
 
     public void PrepareGridLines()
     {
-        if (gridLines.Length == 2)
-        {
-            Destroy(gridLines[0].gameObject);
-            Destroy(gridLines[1].gameObject);
-        }
-        else
-            gridLines = new LineRenderer[2];
-
+        if (gridLinesHor != null)
+            Destroy(gridLinesHor.gameObject);
+        if (gridLinesVert != null)
+            Destroy(gridLinesVert.gameObject);
+        
         GameObject G = new GameObject("lines0");
         G.transform.position = grid.GetPosition();
         G.transform.SetParent(transform);
-        gridLines[0] = G.AddComponent<LineRenderer>();
-        PrepareGridHorizontal(gridLines[0]);
+        gridLinesHor = G.AddComponent<LineRenderer>();
+        PrepareGridHorizontal(gridLinesHor);
 
         G = new GameObject("lines1");
         G.transform.position = grid.GetPosition();
         G.transform.SetParent(transform);
-        gridLines[1] = G.AddComponent<LineRenderer>();
-        PrepareGridVertical(gridLines[1]);
+        gridLinesVert = G.AddComponent<LineRenderer>();
+        PrepareGridVertical(gridLinesVert);
 
         if (enabled == false)
         {
-            gridLines[0].enabled = false;
-            gridLines[1].enabled = false;
+            gridLinesHor.enabled = false;
+            gridLinesVert.enabled = false;
         }
     }
 
     void OnEnable()
     {
-        if (gridLines.Length == 2)
-        {
-            gridLines[0].enabled = true;
-            gridLines[1].enabled = true;
-        }
-
-
+        if (gridLinesHor != null)
+            gridLinesHor.enabled = true;
+        if (gridLinesVert != null)
+            gridLinesVert.enabled = true;
     }
 
     void OnDisable()
     {
-        if (gridLines == null)
-            return;
-
-        if (gridLines[0])
-            gridLines[0].enabled = false;
-        if (gridLines[1])
-            gridLines[1].enabled = false;
+        if (gridLinesHor != null)
+            gridLinesHor.enabled = false;
+        if (gridLinesVert != null)
+            gridLinesVert.enabled = false;
     }
 
     void PrepareGridHorizontal(LineRenderer renderer)

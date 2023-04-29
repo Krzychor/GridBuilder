@@ -2,10 +2,21 @@ Shader "GridBuilder/GridDisplay"
 {
 
     SubShader
-    {
+    { 
+        Tags{"RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline"}
         Pass
         {
-            CGPROGRAM
+            Name "DepthOnly"
+            Tags
+            {
+                "LightMode" = "DepthOnly"
+            }
+                // ...
+        }
+
+        Pass
+        {
+            HLSLPROGRAM
 
             #pragma vertex vertexFunc
             #pragma fragment fragmentFunc
@@ -28,12 +39,11 @@ Shader "GridBuilder/GridDisplay"
 
             fixed4 fragmentFunc(v2f i) : COLOR
             {
-             //   return fixed4(1, 1, 1, 1);
+           //     return fixed4(1, 1, 1, 1);
                 return i.color;
-
             }
 
-        ENDCG
+            ENDHLSL
         }
     }
 }

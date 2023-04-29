@@ -28,7 +28,7 @@ public class CameraSettings
 public class BuildCamera : MonoBehaviour
 {
     public float mouseSensivity = 0.01f;
-    public float scrollSensivity = 0.01f;
+    public float scrollSensivity = 0.001f;
     public float maxRange = 30;
     public float speed = 1.0f;
 

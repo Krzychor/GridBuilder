@@ -1,7 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-
 
 public interface GridAction
 {
@@ -10,4 +6,10 @@ public interface GridAction
     public void Update();
 
     public void Cancel();
+
+    public void OnClick(bool pressedDown, bool released);
+
+    public void OnRotateLeft();
+
+    public void OnRotateRight();
 }

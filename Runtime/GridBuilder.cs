@@ -15,18 +15,22 @@ public class GridBuilder : MonoBehaviour
 
     public Action<GameObject, Building> onBuildingPlaced;
     GridDisplayer gridDisplayer;
+
     GridAction currentAction;
 
+    public GridBuilderInput input;
+
+    public bool IsDuringAction()
+    {
+        return currentAction != null;
+    }
+
+    public GridAction GetAction() { return currentAction; }
 
     public void SetGrid(GridData grid)
     {
         this.grid = grid;
         gridDisplayer.SetGrid(grid);
-    }
-
-    public bool IsDuringAction()
-    {
-        return currentAction != null;
     }
 
     public void CancelAction()
@@ -81,7 +85,7 @@ public class GridBuilder : MonoBehaviour
         if (IsOverUI())
             return false;
 
-        Ray ray = camera.ScreenPointToRay(Mouse.current.position.ReadValue());
+        Ray ray = camera.ScreenPointToRay(input.mousePos);
         if (Physics.Raycast(ray, out RaycastHit hit, raycastDistance, terrainMask))
         {
             pos = hit.point;
@@ -96,7 +100,7 @@ public class GridBuilder : MonoBehaviour
         if (IsOverUI())
             return null;
 
-        Ray ray = camera.ScreenPointToRay(Mouse.current.position.ReadValue());
+        Ray ray = camera.ScreenPointToRay(input.mousePos);
         if (Physics.Raycast(ray, out RaycastHit hit, raycastDistance))
         {
             return hit.collider.gameObject;
@@ -107,7 +111,7 @@ public class GridBuilder : MonoBehaviour
 
     private void Awake()
     {
-        if(camera == null)
+        if (camera == null)
             camera = Camera.main;
 
         gridDisplayer = gameObject.GetComponent<GridDisplayer>();
@@ -116,12 +120,36 @@ public class GridBuilder : MonoBehaviour
     private void Update()
     {
         currentAction?.Update();
-
-        if (Keyboard.current[Key.Escape].wasPressedThisFrame == true)
-        {
-            if (IsDuringAction())
-                CancelAction();
-        }
     }
 
+    public void OnCancel(InputAction.CallbackContext context)
+    {
+        CancelAction();
+    }
+
+    public void OnClick(InputAction.CallbackContext context)
+    {
+        if (context.started)
+            currentAction?.OnClick(pressedDown: true, released: false);
+
+        if (context.canceled)
+            currentAction?.OnClick(pressedDown: false, released: true);
+    }
+
+    public void OnRotateRight(InputAction.CallbackContext context)
+    {
+        if (context.performed)
+            currentAction?.OnRotateRight();
+    }
+
+    public void OnRotateLeft(InputAction.CallbackContext context)
+    {
+        if (context.performed)
+            currentAction?.OnRotateLeft();
+    }
+
+    public void OnMousePos(InputAction.CallbackContext context)
+    {
+        input.mousePos = context.ReadValue<Vector2>();
+    }
 }

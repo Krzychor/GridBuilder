@@ -9,6 +9,7 @@ public class GridGeneratorEditor : EditorWindow
 {
     public float cellSize = 1;
     public float epsilon = 0.01f;
+    public float scannerHeight = 5;
     public Building building;
 
     public GameObject G;
@@ -30,6 +31,7 @@ public class GridGeneratorEditor : EditorWindow
         {
             cellSize = EditorGUILayout.FloatField("cell size", cellSize);
             epsilon = EditorGUILayout.FloatField("epsilon", epsilon);
+            scannerHeight = EditorGUILayout.FloatField("scanner height", scannerHeight);
             building = (Building)EditorGUILayout.ObjectField("building", building, typeof(Building), true);
 
             if (oldBuilding != building)
@@ -93,13 +95,13 @@ public class GridGeneratorEditor : EditorWindow
 
     List<Bounds> CreateBoundsList()
     {
-        List<Bounds> boundsList = new List<Bounds>();
+        List<Bounds> boundsList = new(4);
 
         gridInstance.SetRotation(0);
         for (int i = 0; i < 4; i++)
         {
             GameObject gameobject = Instantiate(building.model, new Vector3(), gridInstance.GetRotation());
-            boundsList.Add(CalculateBounds());
+            boundsList.Add(CalculateBounds(gameobject));
             DestroyImmediate(gameobject);
             gridInstance.RotateRight();
         }
@@ -134,17 +136,15 @@ public class GridGeneratorEditor : EditorWindow
         MeshCollider collider = floor.AddComponent<MeshCollider>();
         MeshFilter filter = floor.AddComponent<MeshFilter>();
         MeshRenderer renderer = floor.AddComponent<MeshRenderer>();
-        renderer.material = new Material(Shader.Find("GridBuilder/GridDisplay"));
+        renderer.sharedMaterial = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit"));
         floor.hideFlags = HideFlags.HideAndDontSave;
     }
 
     private void Generate()
     {
-        Collider[] colls = G.GetComponentsInChildren<Collider>(true);
+        CreateNewModel();
         G.transform.rotation = Quaternion.identity;
-        Bounds bounds = colls[0].bounds;
-        for (int i = 1; i < colls.Length; i++)
-            bounds.Encapsulate(colls[i].bounds);
+        Bounds bounds = CalculateBounds(G);
 
         max = GetSize(bounds);
         BuildingGridTemplate bg = new BuildingGridTemplate(max, CreateBoundsList());
@@ -156,8 +156,9 @@ public class GridGeneratorEditor : EditorWindow
             {
                 Vector3 pos = new Vector3(x * cellSize, 0, y * cellSize);
                 Vector3 center = bounds.min + new Vector3(cellSize, cellSize, cellSize) / 2 + pos;
-                Vector3 ext = new(cellSize - epsilon, bounds.size.y, cellSize - epsilon);
-                bg.Set1(x, y, Physics.CheckBox(center, ext));
+                center.y = scannerHeight / 2.0f;
+                Vector3 ext = new(cellSize - epsilon, scannerHeight/2.0f, cellSize - epsilon);
+                bg.Set(x, y, Physics.CheckBox(center, ext));
             }
 
         floor.GetComponentInChildren<Collider>().enabled = true;
@@ -171,6 +172,9 @@ public class GridGeneratorEditor : EditorWindow
     {
         if (floor == null)
             CreateFloorObject();
+        if (gridInstance == null && building != null)
+            gridInstance = new BuildingGridInstance(building.grid);
+        
         if (G != null)
         {
             if (Keyboard.current[Key.LeftShift].isPressed)
@@ -178,9 +182,6 @@ public class GridGeneratorEditor : EditorWindow
             else
                 G.SetActive(true);
         }
-
-     //   if (building != null && gridInstance.rotation == 0)
-     //      building.grid.shift = G.transform.position;
     }
 
     private void OnEnable()
@@ -203,7 +204,7 @@ public class GridGeneratorEditor : EditorWindow
         return res;
     }
 
-    private Bounds CalculateBounds()
+    private Bounds CalculateBounds(GameObject G)
     {
         Collider[] colls = G.GetComponentsInChildren<Collider>(true);
         Bounds bounds = colls[0].bounds;
@@ -267,7 +268,7 @@ public class GridGeneratorEditor : EditorWindow
 
     private void GenerateTiles(bool onlyOccupied = false)
     {
-        if(building == null)
+        if (building == null)
         {
             floor.GetComponent<MeshFilter>().sharedMesh = null;
             floor.GetComponent<MeshCollider>().sharedMesh = null;
@@ -283,12 +284,10 @@ public class GridGeneratorEditor : EditorWindow
         List<Vector3> verts = new();
         List<int> inds = new();
 
-        Vector2Int gridSize = gridInstance.GetSize();
         Vector2Int min = gridInstance.Min();
         Vector2Int max = gridInstance.Max();
         floor.transform.position = building.grid.boundsList[gridInstance.rotation].min;
-        Vector3 pos = new Vector3();
-
+     
         for (int x = min.x; x <= max.x; x++)
             for (int z = min.y; z <= max.y; z++)
             {
@@ -299,10 +298,10 @@ public class GridGeneratorEditor : EditorWindow
                     continue;
                 float xMin = (x - min.x) * cellSize;
                 float zMin = (z - min.y) * cellSize;
-                verts.Add(pos + new Vector3(xMin,            0, zMin));
-                verts.Add(pos + new Vector3(xMin + cellSize, 0, zMin));
-                verts.Add(pos + new Vector3(xMin + cellSize, 0, zMin + cellSize));
-                verts.Add(pos + new Vector3(xMin,            0, zMin + cellSize));
+                verts.Add(new Vector3(xMin,            0, zMin));
+                verts.Add(new Vector3(xMin + cellSize, 0, zMin));
+                verts.Add(new Vector3(xMin + cellSize, 0, zMin + cellSize));
+                verts.Add(new Vector3(xMin,            0, zMin + cellSize));
                 inds.Add(verts.Count - 4);
                 inds.Add(verts.Count - 2);
                 inds.Add(verts.Count - 3);

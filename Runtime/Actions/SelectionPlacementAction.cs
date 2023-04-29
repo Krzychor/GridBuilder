@@ -1,9 +1,8 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using UnityEngine.InputSystem;
 using UnityEngine;
 using UnityEngine.Pool;
+using UnityEngine.Windows;
 
 
 public class SelectionPlacementAction : GridAction
@@ -23,7 +22,7 @@ public class SelectionPlacementAction : GridAction
         this.builder = builder;
         this.building = building;
         buildingGrid = new BuildingGridInstance(building.grid);
-        displayer = InstancedBuilding.TryCreate(building, buildingGrid);
+        displayer = InstancedBuilding.TryCreate(building);
         if (displayer == null)
             displayer = new GameObjectDisplayer(building, builder.transform);
     }
@@ -70,21 +69,14 @@ public class SelectionPlacementAction : GridAction
                     pos.y = hit.point.y;
 
                 if (builder.grid.CanPlace(pos, buildingGrid))
-                    displayer.Add(pos);
+                    displayer.Add(pos, buildingGrid.GetRotation());
             }
     }
 
     private void UpdateSelection()
     {
         bool raycast = builder.RaycastMouse(out Vector3 pos);
-
-        if (isSelecting && Mouse.current.leftButton.wasReleasedThisFrame)
-        {
-            FinishSelection();
-            isSelecting = false;
-        }
-
-        if (isSelecting && Mouse.current.leftButton.isPressed)
+        if (isSelecting)
         {
             if (raycast)
             {
@@ -122,21 +114,6 @@ public class SelectionPlacementAction : GridAction
                 endIndex = builder.grid.GetCell(pos);
                 UpdateDisplay(new Vector2Int(1, 1));
             }
-
-        }
-
-        if (Keyboard.current[Key.R].wasPressedThisFrame)
-            buildingGrid.RotateRight();
-
-        if (Mouse.current.leftButton.wasPressedThisFrame)
-        {
-            if (raycast)
-            {
-                startIndex = builder.grid.GetCell(pos);
-                endIndex = builder.grid.GetCell(pos);
-                if (builder.grid.IsInsideGrid(startIndex.x, startIndex.z))
-                    isSelecting = true;
-            }
         }
 
 
@@ -144,6 +121,8 @@ public class SelectionPlacementAction : GridAction
 
     private void FinishSelection()
     {
+        Debug.Log("finish");
+        isSelecting = false;
         displayer.ForEach((Vector3 pos) =>
         {
             GameObject placed = builder.grid.PlaceBuilding(building,
@@ -157,6 +136,36 @@ public class SelectionPlacementAction : GridAction
         OnStart();
     }
 
+    private void TryStartSelection()
+    {
+        if (builder.RaycastMouse(out Vector3 pos))
+        {
+            startIndex = builder.grid.GetCell(pos);
+            endIndex = builder.grid.GetCell(pos);
+            if (builder.grid.IsInsideGrid(startIndex.x, startIndex.z))
+                isSelecting = true;
+        }
+    }
+
+    public void OnClick(bool pressedDown, bool released)
+    {
+        if (isSelecting && released)
+            FinishSelection();
+
+        if (pressedDown)
+            TryStartSelection();
+    }
+
+    public void OnRotateLeft()
+    {
+        buildingGrid.RotateLeft();
+    }
+
+    public void OnRotateRight()
+    {
+        buildingGrid.RotateRight();
+    }
+
     private interface BuildingDisplayer
     {
         public void ForEach(Action<Vector3> action);
@@ -165,7 +174,7 @@ public class SelectionPlacementAction : GridAction
 
         public void Clear();
 
-        public void Add(Vector3 pos);
+        public void Add(Vector3 pos, Quaternion rotation);
 
         public void Draw();
 
@@ -174,7 +183,6 @@ public class SelectionPlacementAction : GridAction
 
     private class InstancedBuilding : BuildingDisplayer
     {
-        BuildingGridInstance buildingGrid;
         Vector3 meshShift;
         Vector3 scale;
         Mesh mesh;
@@ -199,7 +207,7 @@ public class SelectionPlacementAction : GridAction
             matrices.Capacity = sizeX * sizeZ;
         }
 
-        public static InstancedBuilding TryCreate(Building building, BuildingGridInstance buildingGrid)
+        public static InstancedBuilding TryCreate(Building building)
         {
             MeshFilter filter = null;
             GameObject model = null;
@@ -231,7 +239,6 @@ public class SelectionPlacementAction : GridAction
 
 
             InstancedBuilding instance = new InstancedBuilding();
-            instance.buildingGrid = buildingGrid;
             instance.mesh = filter.sharedMesh;
             instance.material = model.GetComponentInChildren<MeshRenderer>().sharedMaterial;
             instance.scale = filter.transform.lossyScale;
@@ -251,9 +258,8 @@ public class SelectionPlacementAction : GridAction
             matrices.Clear();
         }
 
-        public void Add(Vector3 pos)
+        public void Add(Vector3 pos, Quaternion rotation)
         {
-            Quaternion rotation = buildingGrid.GetRotation();
             pos += meshShift;
             Matrix4x4 mat = Matrix4x4.TRS(pos, rotation, scale);
             matrices.Add(mat);
@@ -284,10 +290,11 @@ public class SelectionPlacementAction : GridAction
                 false, defaultCapacity: 100, maxSize: 300);
         }
 
-        public void Add(Vector3 pos)
+        public void Add(Vector3 pos, Quaternion rotation)
         {
             GameObject G = pool.Get();
             G.transform.position = pos;
+            G.transform.rotation = rotation;
             objects.Add(G.transform);
         }
 
@@ -313,7 +320,7 @@ public class SelectionPlacementAction : GridAction
 
         public void ReserveSize(int sizeX, int sizeZ)
         {
-         //   objects.Count = sizeX * sizeZ;
+
         }
 
         private GameObject OnCreatePoolGameObject()

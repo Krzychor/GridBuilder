@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
+using static PlaceAction;
 
 public class PlaceAction : GridAction
 {
@@ -24,18 +24,18 @@ public class PlaceAction : GridAction
     {
         this.builder = builder;
         placementData.building = building;
+        placementData.rotatedGrid = new BuildingGridInstance(placementData.building.grid);
     }
 
     public void OnStart()
     {
-        placementData.rotatedGrid = new BuildingGridInstance(placementData.building.grid);
         Quaternion rotation = placementData.rotatedGrid.GetRotation();
 
         GameObject model = placementData.building.model;
         if (placementData.building.preview != null)
             model = placementData.building.preview;
 
-        placementData.buildingPreview = GameObject.Instantiate(model, new Vector3(), rotation);
+        placementData.buildingPreview = GameObject.Instantiate(model, new Vector3(100, 0, 0), rotation);
         placementData.isValid = false;
         placementData.bounds = builder.CalculateBounds(placementData.buildingPreview);
         Renderer[] renderers = placementData.buildingPreview.GetComponentsInChildren<Renderer>();
@@ -63,27 +63,27 @@ public class PlaceAction : GridAction
     public void Update()
     {
         UpdatePeek();
-
-        if (Mouse.current.leftButton.wasPressedThisFrame && builder.IsOverUI() == false)
-            Place();
     }
 
-    void PlaceInCell(PlacementData data, Vector3 point)
+    void PlaceInCell(Vector3Int cell)
     {
-        Vector3 shift = data.rotatedGrid.template.boundsList[data.rotatedGrid.rotation].max;
+        Vector3 shift = placementData.rotatedGrid.template.boundsList[placementData.rotatedGrid.rotation].max;
         Vector3 pos = builder.grid.GetPosition() + shift
-        + new Vector3(data.cell.x * builder.grid.cellSize, point.y, data.cell.z * builder.grid.cellSize);
+        + new Vector3(cell.x * builder.grid.cellSize, 0, cell.z * builder.grid.cellSize);
+
+        pos.x -= placementData.rotatedGrid.GetCenter().x * builder.grid.cellSize;
+        pos.z -= placementData.rotatedGrid.GetCenter().y * builder.grid.cellSize;
 
         if(Physics.Raycast(pos, Vector3.down, out RaycastHit hit, 90, builder.terrainMask))
         {
             pos.y = hit.point.y;
         }
-        data.buildingPreview.transform.position = pos;
+        placementData.buildingPreview.transform.position = pos;
     }
 
     void Place()
     {
-        PlaceInCell(placementData, placementData.buildingPreview.transform.position);
+     //   PlaceInCell(placementData.cell, placementData.buildingPreview.transform.position);
 
         GameObject placed = builder.grid.PlaceBuilding(placementData.building,
             placementData.buildingPreview.transform.position, placementData.rotatedGrid);
@@ -98,28 +98,32 @@ public class PlaceAction : GridAction
 
     void UpdatePeek()
     {
-        if (Keyboard.current[Key.R].wasPressedThisFrame == true)
-            Rotate();
-
-        if (builder.RaycastMouse(out Vector3 point))
+        if (builder.IsOverUI() == false && builder.RaycastMouse(out Vector3 point))
         {
-            bool canPlace = builder.grid.CanPlace(point, placementData.rotatedGrid)
-                && builder.IsOverUI() == false;
+            placementData.buildingPreview.SetActive(true);
+            bool canPlace = builder.grid.CanPlace(point, placementData.rotatedGrid);
 
             if (canPlace)
             {
                 placementData.cell = builder.grid.GetCell(point);
                 placementData.isValid = true;
-                PlaceInCell(placementData, point);
+                PlaceInCell(placementData.cell);
 
                 RenderAsValid(placementData.buildingPreview);
             }
             else
             {
-                placementData.buildingPreview.transform.position = point;
+                Vector3Int cell = builder.grid.GetCell(point);
+                PlaceInCell(cell);
+            //    placementData.buildingPreview.transform.position = point;
                 placementData.isValid = false;
                 RenderAsInvalid(placementData.buildingPreview);
             }
+        }
+        else
+        {
+            placementData.buildingPreview.SetActive(false);
+
         }
     }
 
@@ -137,11 +141,21 @@ public class PlaceAction : GridAction
             renderers[i].material = placementData.replacedMaterials[i];
     }
 
-    void Rotate()
+    public void OnClick(bool pressedDown, bool released)
     {
-        Transform transform = placementData.buildingPreview.transform;
-        placementData.rotatedGrid.RotateRight();
-        transform.rotation = placementData.rotatedGrid.GetRotation();
+        if (released && builder.IsOverUI() == false)
+            Place();
     }
 
+    public void OnRotateLeft()
+    {
+        placementData.rotatedGrid.RotateLeft();
+        placementData.buildingPreview.transform.rotation = placementData.rotatedGrid.GetRotation();
+    }
+
+    public void OnRotateRight()
+    {
+        placementData.rotatedGrid.RotateRight();
+        placementData.buildingPreview.transform.rotation = placementData.rotatedGrid.GetRotation();
+    }
 }

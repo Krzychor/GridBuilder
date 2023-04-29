@@ -1,14 +1,7 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
-
-public struct PlacedBuilding
-{
-    public Vector3Int cell;
-    public BuildingGridInstance grid;
-    public GameObject building;
-}
 
 
 public class GridData : MonoBehaviour
@@ -17,8 +10,21 @@ public class GridData : MonoBehaviour
     public int size = 10;
     public float cellSize = 1;
 
-    bool[,] placeable;
-    List<PlacedBuilding> placedBuildings = new();
+    [SerializeField, HideInInspector]
+    bool[] placeable;
+    [SerializeField, HideInInspector]
+    public List<PlacedBuilding> placedBuildings = new();
+
+    Action onGridChanged;
+
+    public void RegisterOnChageListener(Action listener)
+    {
+        onGridChanged += listener;
+    }
+    public void UnregisterOnChageListener(Action listener)
+    {
+        onGridChanged -= listener;
+    }
 
     public bool IsInsideGrid(Vector3 point)
     {
@@ -40,6 +46,11 @@ public class GridData : MonoBehaviour
         return CanPlace(cell.x, cell.z, buildingGrid);
     }
 
+    public bool CanPlace(int cellX, int cellZ)
+    {
+        return placeable[cellX + cellZ * size];
+    }
+
     public bool CanPlace(int cellX, int cellZ, BuildingGridInstance buildingGrid)
     {
         Vector2Int min = buildingGrid.Min();
@@ -51,7 +62,7 @@ public class GridData : MonoBehaviour
                 {
                     if (buildingGrid.Get(x, z) == true)
                     {
-                        if (placeable[cellX + x, cellZ + z] == false)
+                        if (placeable[cellX + x + (cellZ + z) * size] == false)
                             return false;
                     }
                 }
@@ -62,36 +73,36 @@ public class GridData : MonoBehaviour
         return true;
     }
 
-    public bool TryPlace(Vector3 point, BuildingGridInstance buildingGrid, GameObject building)
+    public bool TryPlace(Vector3 point, BuildingGridInstance buildingGrid, Building building, GameObject gameObject)
     {
         if (!CanPlace(point, buildingGrid))
             return false;
 
         Vector3Int cell = GetCell(point);
+        Place(cell, buildingGrid, building, gameObject);
+        return true;
+    }
 
-        PlacedBuilding newPlaced = new();
+    public void Place(Vector3Int cell, BuildingGridInstance buildingGrid, Building building, GameObject gameObject)
+    {
+        PlacedBuilding newPlaced = gameObject.GetComponent<PlacedBuilding>();
         newPlaced.cell = cell;
-        newPlaced.grid = buildingGrid;
+        newPlaced.grid = this;
         newPlaced.building = building;
 
         placedBuildings.Add(newPlaced);
         SetCells(cell, buildingGrid, true);
-        return true;
     }
 
-    public void Remove(GameObject building)
+    public void Unregister(PlacedBuilding placed)
     {
-        if(TryFind(building, out PlacedBuilding placed) == false)
-            return;
-
-        Destroy(building);
-
-        SetCells(placed.cell, placed.grid, false);
+        BuildingGridInstance buildingGrid = new(placed.building.grid);
+        SetCells(placed.cell, buildingGrid, false);
     }
 
     public bool TryFind(GameObject building, out PlacedBuilding result)
     {
-        result = default;
+        result = null;
         foreach(PlacedBuilding B in placedBuildings)
         {
             if (B.building == building)
@@ -101,6 +112,20 @@ public class GridData : MonoBehaviour
             }
         }
         return false;
+    }
+
+    public void SetCell(int x, int z, bool blocked)
+    {
+        placeable[x + z * size] = !blocked;
+        onGridChanged?.Invoke();
+    }
+
+    public void Clear()
+    {
+        for (int x = 0; x < size; x++)
+            for (int z = 0; z < size; z++)
+                placeable[x + z * size] = true;
+        onGridChanged?.Invoke();
     }
 
     void SetCells(Vector3Int cell, BuildingGridInstance buildingGrid, bool blocked)
@@ -114,10 +139,11 @@ public class GridData : MonoBehaviour
                 {
                     if (buildingGrid.Get(x, z) == true)
                     {
-                        placeable[cell.x + x, cell.z + z] = !blocked;
+                        placeable[cell.x + x + (cell.z + z) * size] = !blocked;
                     }
                 }
             }
+        onGridChanged?.Invoke();
     }
 
     public Vector3Int GetCell(Vector3 point)
@@ -142,24 +168,33 @@ public class GridData : MonoBehaviour
         BuildingGridInstance grid)
     {
         if (CanPlace(position, grid) == false)
-        {
             return null;
-        }
 
         GameObject G = Instantiate(building.model, position, grid.GetRotation());
-        TryPlace(position, grid, G);
+        TryPlace(position, grid, building, G);
         return G;
     }
 
+    public void GenerateGrid()
+    {
+        if(size*size == placeable.GetLength(0))
+        {
+            Clear();
+            return;
+        }
+
+        placeable = new bool[size * size];
+        for (int x = 0; x < size; x++)
+            for (int z = 0; z < size; z++)
+                placeable[x + z * size] = true;
+        onGridChanged?.Invoke();
+    }
 
     private void Awake()
     {
-        placeable = new bool[size, size];
-        for (int x = 0; x < size; x++)
-            for (int z = 0; z < size; z++)
-                placeable[x, z] = true;
+        if (placeable == null || placeable.GetLength(0) != size * size)
+            GenerateGrid();
     }
-
 
     void OnDrawGizmos()
     {
