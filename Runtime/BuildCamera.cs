@@ -31,7 +31,6 @@ public class BuildCamera : MonoBehaviour
     public float scrollSensivity = 0.001f;
     public float maxRange = 30;
     public float speed = 1.0f;
-
     new Camera camera;
     [SerializeField]
     LayerMask mask;

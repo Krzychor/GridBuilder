@@ -9,6 +9,18 @@ public class BuildabilityDisplay : MonoBehaviour
     public LayerMask terrainMask;
     bool changed = true;
 
+    private void OnDisable()
+    {
+        MeshRenderer renderer = GetComponent<MeshRenderer>();
+        renderer.enabled = false;
+    }
+
+    private void OnEnable()
+    {
+        MeshRenderer renderer = GetComponent<MeshRenderer>();
+        renderer.enabled = true;
+    }
+
     private void Start()
     {
         grid.RegisterOnChageListener(OnGridChanged);

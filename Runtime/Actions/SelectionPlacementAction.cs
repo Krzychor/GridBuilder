@@ -121,7 +121,6 @@ public class SelectionPlacementAction : GridAction
 
     private void FinishSelection()
     {
-        Debug.Log("finish");
         isSelecting = false;
         displayer.ForEach((Vector3 pos) =>
         {

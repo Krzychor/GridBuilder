@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using static UnityEditor.PlayerSettings;
 
 public class GridDisplayer : MonoBehaviour
 {
@@ -29,19 +28,23 @@ public class GridDisplayer : MonoBehaviour
         if (gridLinesHor != null)
             Destroy(gridLinesHor.gameObject);
         if (gridLinesVert != null)
-            Destroy(gridLinesVert.gameObject);
-        
+            Destroy(gridLinesVert.gameObject); 
+
         GameObject G = new GameObject("lines0");
         G.transform.position = grid.GetPosition();
         G.transform.SetParent(transform);
         gridLinesHor = G.AddComponent<LineRenderer>();
+        gridLinesHor.material = new Material(Shader.Find("Legacy Shaders/Particles/Alpha Blended Premultiply"));
+        gridLinesHor.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         PrepareGridHorizontal(gridLinesHor);
 
         G = new GameObject("lines1");
         G.transform.position = grid.GetPosition();
         G.transform.SetParent(transform);
         gridLinesVert = G.AddComponent<LineRenderer>();
-        PrepareGridVertical(gridLinesVert);
+        gridLinesVert.material = new Material(Shader.Find("Legacy Shaders/Particles/Alpha Blended Premultiply"));
+        gridLinesVert.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        PrepareGridVertical(gridLinesVert); 
 
         if (enabled == false)
         {
