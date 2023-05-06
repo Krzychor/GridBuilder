@@ -40,12 +40,14 @@ public class BuildCamera : MonoBehaviour
     CameraSettings min = new CameraSettings();
     [SerializeField, Range(0, 1)]
     float settingsLerp;
-
+    Transform anchor;
 
     Rotator rotator;
     public void CenterAt(Transform obj)
     {
-        transform.position = obj.position + new Vector3(0, min.height, -2);
+        anchor = obj;
+        settingsLerp = 0;
+        ApplySettings(CameraSettings.Lerp(min, max, settingsLerp));
     }
 
 
@@ -96,9 +98,9 @@ public class BuildCamera : MonoBehaviour
     void ApplySettings(CameraSettings settings)
     {
         Vector3 pos = transform.position;
-    //    if(anchor)
-     //       pos.y = anchor.position.y + settings.height;
-     //   else
+        if(anchor)
+            pos.y = anchor.position.y + settings.height;
+        else
             pos.y = settings.height;
 
         Vector3 rotation = transform.localRotation.eulerAngles;
