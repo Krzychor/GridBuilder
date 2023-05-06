@@ -1,6 +1,6 @@
 {
   "name": "com.krzychor.gridbuilder",
-  "version": "0.9.5",
+  "version": "0.9.6",
   "displayName": "Grid Builder",
   "description": "This package provide simple grid builder, for more information check https://github.com/Krzychor/GridBuilder",
   "unity": "2021.3",

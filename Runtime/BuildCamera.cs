@@ -46,8 +46,11 @@ public class BuildCamera : MonoBehaviour
     public void CenterAt(Transform obj)
     {
         anchor = obj;
-        settingsLerp = 0;
-        ApplySettings(CameraSettings.Lerp(min, max, settingsLerp));
+        CameraSettings settings = CameraSettings.Lerp(min, max, settingsLerp);
+        float beta = Mathf.Deg2Rad * (90.0f -  transform.rotation.eulerAngles.x);
+        float c = settings.height / Mathf.Cos(beta);
+        Vector3 forward = transform.forward;
+        transform.position = obj.transform.position - forward * c;
     }
 
 
