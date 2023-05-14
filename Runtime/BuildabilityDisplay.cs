@@ -9,16 +9,26 @@ public class BuildabilityDisplay : MonoBehaviour
     public LayerMask terrainMask;
     bool changed = true;
 
+    GameObject meshObject;
+
     private void OnDisable()
     {
-        MeshRenderer renderer = GetComponent<MeshRenderer>();
+        MeshRenderer renderer = meshObject.GetComponent<MeshRenderer>();
         renderer.enabled = false;
     }
 
     private void OnEnable()
     {
-        MeshRenderer renderer = GetComponent<MeshRenderer>();
+        MeshRenderer renderer = meshObject.GetComponent<MeshRenderer>();
         renderer.enabled = true;
+    }
+
+    private void Awake()
+    {
+        meshObject = new GameObject();
+        meshObject.transform.parent = transform;
+        meshObject.AddComponent<MeshFilter>();
+        meshObject.AddComponent<MeshRenderer>();
     }
 
     private void Start()
@@ -47,7 +57,7 @@ public class BuildabilityDisplay : MonoBehaviour
 
     private void Generate()
     {
-        MeshFilter filter = GetComponent<MeshFilter>();
+        MeshFilter filter = meshObject.GetComponent<MeshFilter>();
         Mesh mesh = new()
         {
             name = "buildability mesh",

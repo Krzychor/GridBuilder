@@ -24,7 +24,6 @@ public class CameraSettings
 }
 
 
-[RequireComponent(typeof(Camera))]
 public class BuildCamera : MonoBehaviour
 {
     public float mouseSensivity = 0.01f;

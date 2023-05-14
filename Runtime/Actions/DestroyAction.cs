@@ -13,10 +13,7 @@ public class DestroyAction : GridAction
     public Material[] originalMaterials;
     public Material[] replacedMaterials;
 
-    public void Cancel()
-    {
-
-    }
+    public void Cancel() { }
 
     public DestroyAction(GridBuilder builder)
     {
@@ -84,7 +81,9 @@ public class DestroyAction : GridAction
     {
         if(pressedDown && selected != null)
         {
-            GameObject.Destroy(selected.gameObject);
+            builder.onBuildingDestroyed?.Invoke(selected);
+            if(builder.applyAction)
+                GameObject.Destroy(selected.gameObject);
             selected = null;
         }
     }

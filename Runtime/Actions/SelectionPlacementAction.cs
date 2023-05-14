@@ -124,11 +124,12 @@ public class SelectionPlacementAction : GridAction
         isSelecting = false;
         displayer.ForEach((Vector3 pos) =>
         {
-            GameObject placed = builder.grid.PlaceBuilding(building,
+            GameObject placed = builder.grid.TryPlaceBuilding(building,
                 pos, buildingGrid);
 
             if (placed != null)
-                builder.onBuildingPlaced?.Invoke(placed, building);
+                builder.onBuildingPlaced?.Invoke(placed, pos, building, buildingGrid, builder.grid.GetCell(pos));
+            
         });
         displayer.Clear();
 

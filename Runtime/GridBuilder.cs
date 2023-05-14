@@ -13,7 +13,12 @@ public class GridBuilder : MonoBehaviour
     public new Camera camera;
     public float raycastDistance = 1000.0f;
 
-    public Action<GameObject, Building> onBuildingPlaced;
+    public delegate void OnBuildingPlacedAction(GameObject placed, Vector3 pos, Building building, BuildingGridInstance gridInstance, 
+        Vector3Int cell);
+    public delegate void OnBuildingDestroyedAction(PlacedBuilding placed);
+    public bool applyAction = true;
+    public OnBuildingPlacedAction onBuildingPlaced;
+    public OnBuildingDestroyedAction onBuildingDestroyed;
     GridDisplayer gridDisplayer;
     GridAction currentAction;
     bool isOverUI = false;

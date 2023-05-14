@@ -130,7 +130,7 @@ public class GridData : MonoBehaviour
         onGridChanged?.Invoke();
     }
 
-    void SetCells(Vector3Int cell, BuildingGridInstance buildingGrid, bool blocked)
+    public void SetCells(Vector3Int cell, BuildingGridInstance buildingGrid, bool blocked)
     {
         Vector2Int min = buildingGrid.Min();
         Vector2Int max = buildingGrid.Max();
@@ -166,7 +166,7 @@ public class GridData : MonoBehaviour
         return transform.position;
     }
 
-    public GameObject PlaceBuilding(Building building, Vector3 position,
+    public GameObject TryPlaceBuilding(Building building, Vector3 position,
         BuildingGridInstance grid)
     {
         if (CanPlace(position, grid) == false)

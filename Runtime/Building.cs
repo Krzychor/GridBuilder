@@ -134,10 +134,10 @@ public class BuildingGridInstance
         return new Vector2Int(template.gridSize.x - 1 - point.y, point.x);
     }
 
-    public BuildingGridInstance(BuildingGridTemplate buildingGridTemplate)
+    public BuildingGridInstance(BuildingGridTemplate buildingGridTemplate, int rotation = 0)
     {
         template = buildingGridTemplate;
-        rotation = 0;
+        this.rotation = rotation;
     }
 
     public void RotateLeft()

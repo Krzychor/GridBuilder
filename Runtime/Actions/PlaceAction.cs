@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using static PlaceAction;
 
 public class PlaceAction : GridAction
 {
@@ -35,7 +34,7 @@ public class PlaceAction : GridAction
         if (placementData.building.preview != null)
             model = placementData.building.preview;
 
-        placementData.buildingPreview = GameObject.Instantiate(model, new Vector3(100, 0, 0), rotation);
+        placementData.buildingPreview = GameObject.Instantiate(model, new Vector3(0, 0, 0), rotation);
         placementData.isValid = false;
         placementData.bounds = builder.CalculateBounds(placementData.buildingPreview);
         Renderer[] renderers = placementData.buildingPreview.GetComponentsInChildren<Renderer>();
@@ -83,15 +82,19 @@ public class PlaceAction : GridAction
 
     void Place()
     {
-     //   PlaceInCell(placementData.cell, placementData.buildingPreview.transform.position);
-
-        GameObject placed = builder.grid.PlaceBuilding(placementData.building,
-            placementData.buildingPreview.transform.position, placementData.rotatedGrid);
-
+        Vector3 pos = placementData.buildingPreview.transform.position;
         GameObject.Destroy(placementData.buildingPreview);
         placementData.buildingPreview = null;
-        if (placed != null)
-            builder.onBuildingPlaced?.Invoke(placed, placementData.building);
+
+        if (builder.applyAction)
+        {
+            GameObject placed = builder.grid.TryPlaceBuilding(placementData.building,
+                pos, placementData.rotatedGrid);
+
+            builder.onBuildingPlaced?.Invoke(placed, placed.transform.position, placementData.building, placementData.rotatedGrid, placementData.cell);
+        }
+        else
+            builder.onBuildingPlaced?.Invoke(null, pos, placementData.building, placementData.rotatedGrid, placementData.cell);
 
         OnStart();
     }
@@ -115,7 +118,6 @@ public class PlaceAction : GridAction
             {
                 Vector3Int cell = builder.grid.GetCell(point);
                 PlaceInCell(cell);
-            //    placementData.buildingPreview.transform.position = point;
                 placementData.isValid = false;
                 RenderAsInvalid(placementData.buildingPreview);
             }
@@ -123,7 +125,6 @@ public class PlaceAction : GridAction
         else
         {
             placementData.buildingPreview.SetActive(false);
-
         }
     }
 

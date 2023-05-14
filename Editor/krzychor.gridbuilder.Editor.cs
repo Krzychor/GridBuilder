@@ -11,6 +11,8 @@ public class GridGeneratorEditor : EditorWindow
     public float epsilon = 0.01f;
     public float scannerHeight = 5;
     public Building building;
+    bool dynamicGridSize = true;
+    Vector2Int demandedGridSize;
 
     public GameObject G;
     public GameObject floor;
@@ -33,6 +35,22 @@ public class GridGeneratorEditor : EditorWindow
             epsilon = EditorGUILayout.FloatField("epsilon", epsilon);
             scannerHeight = EditorGUILayout.FloatField("scanner height", scannerHeight);
             building = (Building)EditorGUILayout.ObjectField("building", building, typeof(Building), true);
+
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("dynamic grids size");
+            bool newDynamicGridSize = EditorGUILayout.Toggle(dynamicGridSize);
+            EditorGUILayout.EndHorizontal();
+
+            if (newDynamicGridSize != dynamicGridSize)
+            {
+                demandedGridSize = building.grid.gridSize;
+                dynamicGridSize = newDynamicGridSize;
+            }
+
+            if (dynamicGridSize == false)
+            {
+                demandedGridSize = EditorGUILayout.Vector2IntField("grid size", demandedGridSize);
+            }
 
             if (oldBuilding != building)
                 CreateNewModel();
@@ -72,8 +90,15 @@ public class GridGeneratorEditor : EditorWindow
             gridInstance = new BuildingGridInstance(building.grid);
             G = PrefabUtility.InstantiatePrefab(building.model) as GameObject;
             G.transform.position = Vector3.zero;
+            Vector3 pos = building.grid.boundsList[gridInstance.rotation].center;
+            pos.y = 0;
+            G.transform.position = -pos;
             G.transform.rotation = gridInstance.GetRotation();
+
+            Selection.activeGameObject = G;
+            SceneView.FrameLastActiveSceneView();
         }
+
 
         GenerateTiles();
     }
@@ -86,7 +111,9 @@ public class GridGeneratorEditor : EditorWindow
         if (building != null)
         {
             G = PrefabUtility.InstantiatePrefab(building.model) as GameObject;
-            G.transform.position = Vector3.zero;
+            Vector3 pos = building.grid.boundsList[gridInstance.rotation].center;
+            pos.y = 0;
+            G.transform.position = -pos;
             G.transform.rotation = gridInstance.GetRotation();
         }
 
@@ -147,6 +174,9 @@ public class GridGeneratorEditor : EditorWindow
         Bounds bounds = CalculateBounds(G);
 
         max = GetSize(bounds);
+        if (dynamicGridSize == false)
+            max = demandedGridSize;
+
         BuildingGridTemplate bg = new BuildingGridTemplate(max, CreateBoundsList());
         gridInstance = new BuildingGridInstance(bg);
 
@@ -162,6 +192,7 @@ public class GridGeneratorEditor : EditorWindow
             }
 
         floor.GetComponentInChildren<Collider>().enabled = true;
+        floor.transform.position = new Vector3(-max.x/2.0f, 0, -max.y/2.0f);
         building.grid = bg;
         EditorUtility.SetDirty(building);
         AssetDatabase.SaveAssets();
@@ -268,7 +299,12 @@ public class GridGeneratorEditor : EditorWindow
 
     private void GenerateTiles(bool onlyOccupied = false)
     {
-        if (building == null)
+        bool isValid = true;
+
+        if (building == null || building.grid.boundsList == null || building.grid.boundsList.Count == 0)
+            isValid = false;
+
+        if (isValid == false)
         {
             floor.GetComponent<MeshFilter>().sharedMesh = null;
             floor.GetComponent<MeshCollider>().sharedMesh = null;
@@ -285,9 +321,11 @@ public class GridGeneratorEditor : EditorWindow
         List<int> inds = new();
 
         Vector2Int min = gridInstance.Min();
-        Vector2Int max = gridInstance.Max();
-        floor.transform.position = building.grid.boundsList[gridInstance.rotation].min;
-     
+        Vector2Int max = gridInstance.Max(); 
+        floor.transform.position = new Vector3(-gridInstance.GetSize().x / 2.0f, 0, -gridInstance.GetSize().y / 2.0f);
+        //    floor.transform.position = building.grid.boundsList[gridInstance.rotation].min;
+        //   floor.transform.position = new Vector3(building.grid.gridSize.x / 2.0f, 0, building.grid.gridSize.y / 2.0f);
+
         for (int x = min.x; x <= max.x; x++)
             for (int z = min.y; z <= max.y; z++)
             {
