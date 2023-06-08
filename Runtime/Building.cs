@@ -19,6 +19,11 @@ public class BuildingGridTemplate
         defaultCenter = size / 2;
     }
 
+    public bool IsValid()
+    {
+        return boundsList.Count > 0;
+    }
+
     public void Set(int x, int z, bool value)
     {
         grid[x + z * gridSize.x] = value;

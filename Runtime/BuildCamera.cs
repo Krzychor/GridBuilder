@@ -26,6 +26,19 @@ public class CameraSettings
 
 public class BuildCamera : MonoBehaviour
 {
+    struct Input
+    {
+        public bool desireLeft;
+        public bool desireRight;
+        public bool desireForward;
+        public bool desireBack;
+
+        public void Reset()
+        {
+            this = new Input();
+        }
+    }
+
     public float mouseSensivity = 0.01f;
     public float scrollSensivity = 0.001f;
     public float maxRange = 30;
@@ -39,9 +52,11 @@ public class BuildCamera : MonoBehaviour
     CameraSettings min = new CameraSettings();
     [SerializeField, Range(0, 1)]
     float settingsLerp;
-    Transform anchor;
 
+    Transform anchor;
     Rotator rotator;
+    Input input;
+
     public void CenterAt(Transform obj)
     {
         anchor = obj;
@@ -52,6 +67,10 @@ public class BuildCamera : MonoBehaviour
         transform.position = obj.transform.position - forward * c;
     }
 
+    private void OnDrawGizmos()
+    {
+        rotator.OnDrawGizmos();
+    }
 
     void OnValidate()
     {
@@ -65,32 +84,30 @@ public class BuildCamera : MonoBehaviour
         rotator = new Rotator(this);
     }
 
-
     void Update()
     {
         rotator.Update();
 
         if(rotator.IsRotating() == false)
             Move();
-
     }
 
     void Move()
     {
+        // if (Keyboard.current[Key.D].isPressed)
         Vector3 dir = new();
-        if (Keyboard.current[Key.D].isPressed)
+        if(input.desireRight)
             dir += transform.right;
-        if (Keyboard.current[Key.A].isPressed)
+        if (input.desireLeft)
             dir -= transform.right;
-        if (Keyboard.current[Key.W].isPressed)
+        if (input.desireForward)
             dir += transform.forward;
-        if (Keyboard.current[Key.S].isPressed)
+        if (input.desireBack)
             dir -= transform.forward;
         dir.y = 0;
         dir *= speed * Time.deltaTime;
         transform.position += dir;
 
-        
         float scroll = -Mouse.current.scroll.ReadValue().y;
         settingsLerp += scroll * scrollSensivity;   
         settingsLerp = Mathf.Clamp01(settingsLerp);
@@ -116,6 +133,46 @@ public class BuildCamera : MonoBehaviour
 
     public void OnFocusLost() { }
 
+    public void OnMoveRight(InputAction.CallbackContext context)
+    {
+        if (context.performed)
+            input.desireRight = true;
+        if(context.canceled)
+            input.desireRight = false;
+    }
+
+    public void OnMoveLeft(InputAction.CallbackContext context)
+    {
+        if (context.performed)
+            input.desireLeft = true;
+        if (context.canceled)
+            input.desireLeft = false;
+    }
+
+    public void OnMoveForward(InputAction.CallbackContext context)
+    {
+        if(context.performed)
+            input.desireForward = true;
+        if (context.canceled)
+            input.desireForward = false;
+    }
+
+    public void OnMoveBack(InputAction.CallbackContext context)
+    {
+        if (context.performed)
+            input.desireBack = true;
+        if (context.canceled)
+            input.desireBack = false;
+    }
+
+    public void OnRotateClick(InputAction.CallbackContext context)
+    {
+        if (context.started)
+            rotator.OnRotateStart();
+
+        if (context.canceled)
+            rotator.OnRotateEnd();
+    }
 
     public class Rotator
     {
@@ -131,9 +188,12 @@ public class BuildCamera : MonoBehaviour
 
         public void Update()
         {
-
-            if (Mouse.current.rightButton.wasPressedThisFrame)
+            if(startedRotation)
             {
+                passedRotateDelay += Time.deltaTime;
+                if (passedRotateDelay < rotateDelay)
+                    return;
+
                 beforeRotation = buildCamera.transform.rotation;
                 beforePosition = buildCamera.transform.position;
                 canRotate = GetHitPoint(out Vector3 point);
@@ -147,7 +207,7 @@ public class BuildCamera : MonoBehaviour
                 totalRotation = 0;
             }
 
-            if (Mouse.current.rightButton.isPressed && canRotate)
+            if (isRotating)
             {
                 float delta = buildCamera.mouseSensivity * Mouse.current.delta.ReadValue().x;
                 totalRotation += delta;
@@ -157,16 +217,34 @@ public class BuildCamera : MonoBehaviour
                 buildCamera.transform.RotateAround(rotationPoint, Vector3.up, totalRotation);
             }
 
-            if (Mouse.current.rightButton.wasReleasedThisFrame && canRotate)
+        }
+
+        public void OnDrawGizmos()
+        {
+            GetHitPoint(out Vector3 point);
+            Gizmos.color = Color.red;
+            Gizmos.DrawLine(buildCamera.transform.position, point);
+        }
+
+        public void OnRotateStart()
+        {
+            startedRotation = true;
+            passedRotateDelay = 0;
+        }
+
+        public void OnRotateEnd()
+        {
+            startedRotation = false;
+
+            if (isRotating)
             {
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
-                canRotate = false;
                 isRotating = false;
             }
         }
 
-        bool GetHitPoint(out Vector3 point)
+        private bool GetHitPoint(out Vector3 point)
         {
             Vector2 middle = new Vector2(buildCamera.camera.pixelWidth / 2,
                 buildCamera.camera.pixelHeight / 2);
@@ -185,7 +263,10 @@ public class BuildCamera : MonoBehaviour
         }
 
 
-        BuildCamera buildCamera;
+        bool startedRotation = false;
+        float rotateDelay = 1.0f;
+        float passedRotateDelay = 0;
+        readonly BuildCamera buildCamera;
         Quaternion beforeRotation;
         Vector3 beforePosition;
         bool canRotate = false;

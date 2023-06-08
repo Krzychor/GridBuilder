@@ -37,6 +37,14 @@ public class GridData : MonoBehaviour
         return cellIndexX >= 0 && cellIndexZ >= 0 && cellIndexX < size && cellIndexZ < size;
     }
 
+    public Bounds GetBounds()
+    {
+        Vector3 boundsSize = new Vector3(size*cellSize, maxHeight, size*cellSize);
+        Vector3 center = transform.position + boundsSize / 2.0f;
+        return new Bounds(center, boundsSize);
+    }
+
+
     public bool CanPlace(Vector3 point, BuildingGridInstance buildingGrid)
     {
         if (!IsInsideGrid(point))

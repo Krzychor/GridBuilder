@@ -129,6 +129,16 @@ public class GridBuilder : MonoBehaviour
         currentAction?.Update();
     }
 
+    private void OnDrawGizmos()
+    {
+        if(camera != null)
+        {
+            Gizmos.color = Color.red;
+            if (RaycastMouse(out Vector3 pos))
+                Gizmos.DrawLine(camera.transform.position, pos);
+        }
+    }
+
     public void OnCancel(InputAction.CallbackContext context)
     {
         CancelAction();

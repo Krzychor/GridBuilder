@@ -90,8 +90,13 @@ public class GridGeneratorEditor : EditorWindow
             gridInstance = new BuildingGridInstance(building.grid);
             G = PrefabUtility.InstantiatePrefab(building.model) as GameObject;
             G.transform.position = Vector3.zero;
-            Vector3 pos = building.grid.boundsList[gridInstance.rotation].center;
-            pos.y = 0;
+
+            Vector3 pos = Vector3.zero;
+            if (building.grid.boundsList.Count > 0)
+            {
+                pos = building.grid.boundsList[gridInstance.rotation].center;
+                pos.y = 0;
+            }
             G.transform.position = -pos;
             G.transform.rotation = gridInstance.GetRotation();
 

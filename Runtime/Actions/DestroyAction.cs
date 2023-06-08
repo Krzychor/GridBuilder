@@ -23,7 +23,6 @@ public class DestroyAction : GridAction
     public void OnStart()
     {
 
-
     }
 
     public void Update()

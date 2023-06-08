@@ -133,7 +133,8 @@ public class SelectionPlacementAction : GridAction
         });
         displayer.Clear();
 
-        OnStart();
+        if (builder.GetAction() == this)
+            OnStart();
     }
 
     private void TryStartSelection()

@@ -95,8 +95,9 @@ public class PlaceAction : GridAction
         }
         else
             builder.onBuildingPlaced?.Invoke(null, pos, placementData.building, placementData.rotatedGrid, placementData.cell);
-
-        OnStart();
+       
+        if(builder.GetAction() == this)
+            OnStart();
     }
 
     void UpdatePeek()
