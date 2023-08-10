@@ -1,6 +1,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Runtime.Serialization;
 using UnityEngine;
 
 
@@ -198,6 +201,18 @@ public class GridData : MonoBehaviour
             for (int z = 0; z < size; z++)
                 placeable[x + z * size] = true;
         onGridChanged?.Invoke();
+    }
+
+    public void SerializeGrid(Stream stream, IFormatter formatter)
+    {
+        formatter.Serialize(stream, placeable);
+        stream.Close();
+    }
+
+    public void DeserializeGrid(Stream stream, IFormatter formatter)
+    {
+        placeable = (bool[])formatter.Deserialize(stream);
+        stream.Close();
     }
 
     private void Awake()

@@ -142,7 +142,7 @@ public class GridGeneratorEditor : EditorWindow
 
     private bool CanOpenScanScene()
     {
-        for(int i = 0; i < EditorSceneManager.loadedSceneCount; i++)
+        for(int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++)
             if(EditorSceneManager.GetSceneAt(i).isDirty == true)
                 return false;
         return true;
@@ -150,7 +150,7 @@ public class GridGeneratorEditor : EditorWindow
 
     private bool IsScanSceneReady()
     {
-        return EditorSceneManager.loadedSceneCount == 1 && EditorSceneManager.GetSceneAt(0).name == "Scanner";
+        return UnityEngine.SceneManagement.SceneManager.sceneCount == 1 && EditorSceneManager.GetSceneAt(0).name == "Scanner";
     }
 
     private void CreateScene()
