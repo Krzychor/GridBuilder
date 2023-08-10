@@ -206,13 +206,11 @@ public class GridData : MonoBehaviour
     public void SerializeGrid(Stream stream, IFormatter formatter)
     {
         formatter.Serialize(stream, placeable);
-        stream.Close();
     }
 
     public void DeserializeGrid(Stream stream, IFormatter formatter)
     {
         placeable = (bool[])formatter.Deserialize(stream);
-        stream.Close();
     }
 
     private void Awake()
