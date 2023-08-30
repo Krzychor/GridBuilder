@@ -173,6 +173,8 @@ public class Building : ScriptableObject
     public new string name;
     public GameObject model;
     public GameObject preview;
-    public BuildingGridTemplate grid;
+    [HideInInspector] public BuildingGridTemplate grid;
+    public PlacementValidator placementValidator;
+    public CustomSelectionDisplayer customSelectionDisplayer;
 }
 

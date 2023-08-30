@@ -96,14 +96,18 @@ public class GridData : MonoBehaviour
 
     public void Place(Vector3Int cell, BuildingGridInstance buildingGrid, Building building, GameObject gameObject)
     {
-        PlacedBuilding newPlaced = gameObject.GetComponent<PlacedBuilding>();
-        if (newPlaced == null)
-            newPlaced = gameObject.AddComponent<PlacedBuilding>();
-        newPlaced.cell = cell;
-        newPlaced.grid = this;
-        newPlaced.building = building;
+        if(gameObject != null)
+        {
+            PlacedBuilding newPlaced = gameObject.GetComponent<PlacedBuilding>();
+            if (newPlaced == null)
+                newPlaced = gameObject.AddComponent<PlacedBuilding>();
+            newPlaced.cell = cell;
+            newPlaced.grid = this;
+            newPlaced.building = building;
 
-        placedBuildings.Add(newPlaced);
+            placedBuildings.Add(newPlaced);
+        }
+
         SetCells(cell, buildingGrid, true);
     }
 
@@ -183,7 +187,9 @@ public class GridData : MonoBehaviour
         if (CanPlace(position, grid) == false)
             return null;
 
-        GameObject G = Instantiate(building.model, position, grid.GetRotation());
+        GameObject G = null;
+        if (building.model != null)
+            G = Instantiate(building.model, position, grid.GetRotation());
         TryPlace(position, grid, building, G);
         return G;
     }

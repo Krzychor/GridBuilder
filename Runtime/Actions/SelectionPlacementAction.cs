@@ -2,7 +2,14 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Pool;
-using UnityEngine.Windows;
+
+
+public interface ISelectionValidator
+{
+    public bool Validate(List<Vector3Int> cells);
+}
+
+
 
 
 public class SelectionPlacementAction : GridAction
@@ -14,29 +21,46 @@ public class SelectionPlacementAction : GridAction
     Vector3Int startIndex;
     Vector3Int endIndex;
     bool isSelecting = false;
+    List<Vector3Int> selectedCells = new();
 
     BuildingDisplayer displayer;
+    CustomSelectionDisplayer customDisplayer;
 
     public SelectionPlacementAction(GridBuilder builder, Building building)
     {
         this.builder = builder;
         this.building = building;
         buildingGrid = new BuildingGridInstance(building.grid);
-        displayer = InstancedBuilding.TryCreate(building);
-        if (displayer == null)
-            displayer = new GameObjectDisplayer(building, builder.transform);
+
+        if(building.customSelectionDisplayer != null)
+        {
+            customDisplayer = GameObject.Instantiate(building.customSelectionDisplayer);
+        }
+        else
+        {
+            displayer = InstancedBuilding.TryCreate(building);
+            if (displayer == null)
+                displayer = new GameObjectDisplayer(building, builder.transform);
+        }
     }
 
     public void Update()
     {
         UpdateSelection();
 
-        displayer.Draw();
+        if (customDisplayer != null)
+            customDisplayer.Display(selectedCells, builder.grid);
+        else
+            displayer.Display(selectedCells, buildingGrid.GetRotation(), builder.grid);
     }
 
     public void Cancel()
     {
-        displayer.OnDestroy();
+        if (customDisplayer != null)
+            GameObject.Destroy(customDisplayer.gameObject);
+        else
+            displayer.OnDestroy();
+        customDisplayer = null;
     }
 
     public void OnStart()
@@ -44,10 +68,10 @@ public class SelectionPlacementAction : GridAction
 
     }
 
+
     private void UpdateDisplay(Vector2Int table)
     {
-        displayer.Clear();
-        displayer.ReserveSize(table.x, table.y);
+        selectedCells.Clear();
 
         Vector2Int buildSizeInCells = buildingGrid.GetSize();
         int dirX = 1;
@@ -60,17 +84,22 @@ public class SelectionPlacementAction : GridAction
         for (int x = 0; x < table.x; x++)
             for (int z = 0; z < table.y; z++)
             {
-                Vector3 pos = builder.grid.GetCellWorldPosition(
-                    minCell.x + dirX * x * buildSizeInCells.x + buildingGrid.GetCenter().x,
+                Vector3Int cell = new(minCell.x + dirX * x * buildSizeInCells.x + buildingGrid.GetCenter().x,
+                    0,
                     minCell.z + dirZ * z * buildSizeInCells.y + buildingGrid.GetCenter().y);
+
+                Vector3 pos = builder.grid.GetCellWorldPosition(cell.x, cell.z);
 
                 Vector3 rayPos = new Vector3(pos.x, builder.camera.transform.position.y, pos.z);
                 if (Physics.Raycast(rayPos, Vector3.down, out RaycastHit hit, 900, builder.terrainMask))
                     pos.y = hit.point.y;
 
                 if (builder.grid.CanPlace(pos, buildingGrid))
-                    displayer.Add(pos, buildingGrid.GetRotation());
+                    selectedCells.Add(cell);
             }
+
+        if (building.placementValidator != null)
+            building.placementValidator.Validate(ref selectedCells, builder.grid, building);
     }
 
     private void UpdateSelection()
@@ -122,16 +151,30 @@ public class SelectionPlacementAction : GridAction
     private void FinishSelection()
     {
         isSelecting = false;
-        displayer.ForEach((Vector3 pos) =>
-        {
-            GameObject placed = builder.grid.TryPlaceBuilding(building,
-                pos, buildingGrid);
 
-            if (placed != null)
-                builder.onBuildingPlaced?.Invoke(placed, pos, building, buildingGrid, builder.grid.GetCell(pos));
-            
-        });
-        displayer.Clear();
+        if(customDisplayer != null)
+        {
+
+        }
+        else
+        {
+
+        }
+
+
+        foreach(Vector3Int cell in selectedCells)
+        {
+            Vector3 pos = builder.grid.GetCellWorldPosition(cell.x, cell.z);
+            if (builder.applyAction)
+            {
+                GameObject placed = builder.grid.TryPlaceBuilding(building, pos, buildingGrid);
+
+                builder.onBuildingPlaced?.Invoke(placed, pos, building, buildingGrid, cell);
+            }
+            else
+                builder.onBuildingPlaced?.Invoke(null, pos, building, buildingGrid, cell);
+
+        }
 
         if (builder.GetAction() == this)
             OnStart();
@@ -167,17 +210,12 @@ public class SelectionPlacementAction : GridAction
         buildingGrid.RotateRight();
     }
 
+
     private interface BuildingDisplayer
     {
-        public void ForEach(Action<Vector3> action);
+        public void Display(List<Vector3Int> cells, Quaternion rotation, GridData grid);
 
-        public void ReserveSize(int sizeX, int sizeZ);
-
-        public void Clear();
-
-        public void Add(Vector3 pos, Quaternion rotation);
-
-        public void Draw();
+        public void OnUpdate();
 
         public void OnDestroy();
     }
@@ -190,22 +228,11 @@ public class SelectionPlacementAction : GridAction
         Material material;
         List<Matrix4x4> matrices = new();
 
-        private InstancedBuilding() { }
 
-        public void ForEach(Action<Vector3> action)
-        {
-            foreach (Matrix4x4 matrix in matrices)
-                action(matrix.GetPosition());
-        }
 
-        public void Draw()
+        public void OnUpdate()
         {
             Graphics.DrawMeshInstanced(mesh, 0, material, matrices);
-        }
-
-        public void ReserveSize(int sizeX, int sizeZ)
-        {
-            matrices.Capacity = sizeX * sizeZ;
         }
 
         public static InstancedBuilding TryCreate(Building building)
@@ -213,8 +240,13 @@ public class SelectionPlacementAction : GridAction
             MeshFilter filter = null;
             GameObject model = null;
 
-            MeshFilter[] filters = building.model.GetComponentsInChildren<MeshFilter>();
-            if (filters.Length != 1 && building.preview == null)
+            MeshFilter[] filters = null;
+            if (building.model != null)
+            {
+                filters = building.model.GetComponentsInChildren<MeshFilter>();
+            }
+
+            if ((filters == null || filters.Length < 1) && building.preview == null)
                 return null;
 
             if (building.preview != null)
@@ -240,45 +272,63 @@ public class SelectionPlacementAction : GridAction
 
 
             InstancedBuilding instance = new InstancedBuilding();
-            instance.mesh = filter.sharedMesh;
-            instance.material = model.GetComponentInChildren<MeshRenderer>().sharedMaterial;
-            instance.scale = filter.transform.lossyScale;
-            instance.meshShift = filter.transform.position;
+
             if (building.preview != null)
             {
-                instance.mesh = model.GetComponent<MeshFilter>().mesh;
-                instance.material = model.GetComponentInChildren<MeshRenderer>().material;
+                MeshRenderer renderer = building.preview.GetComponentInChildren<MeshRenderer>();
+                if (renderer == null)
+                    return null;
+
+                if(renderer.sharedMaterial.enableInstancing == false)
+                    return null;
+
+                instance.mesh = filter.sharedMesh;
+                instance.material = renderer.sharedMaterial;
                 instance.scale = filter.transform.lossyScale;
                 instance.meshShift = filter.transform.position;
             }
+            else
+            {
+                MeshRenderer renderer = model.GetComponentInChildren<MeshRenderer>();
+                if (renderer == null)
+                    return null;
+
+                if (renderer.sharedMaterial.enableInstancing == false)
+                    return null;
+
+                instance.mesh = filter.sharedMesh;
+                instance.material = renderer.sharedMaterial;
+                instance.scale = filter.transform.lossyScale;
+                instance.meshShift = filter.transform.position;
+            }
+
             return instance;
-        }
-
-        public void Clear()
-        {
-            matrices.Clear();
-        }
-
-        public void Add(Vector3 pos, Quaternion rotation)
-        {
-            pos += meshShift;
-            Matrix4x4 mat = Matrix4x4.TRS(pos, rotation, scale);
-            matrices.Add(mat);
         }
 
         public void OnDestroy()
         {
 
         }
+
+        public void Display(List<Vector3Int> cells, Quaternion rotation, GridData grid)
+        {
+            matrices.Clear();
+            foreach(Vector3Int cell in cells)
+            {
+                Vector3 pos = grid.GetCellWorldPosition(cell.x, cell.z) + meshShift;
+
+                matrices.Add(Matrix4x4.TRS(pos, rotation, scale));
+            }
+        }
     }
 
-    private class GameObjectDisplayer: BuildingDisplayer
+    private class GameObjectDisplayer : BuildingDisplayer
     {
-        List<Transform> objects = new();
+        List<Transform> transforms = new();
         ObjectPool<GameObject> pool;
         Building building;
-
         Transform poolParent;
+
 
         public GameObjectDisplayer(Building building, Transform gridBuilder)
         {
@@ -291,38 +341,30 @@ public class SelectionPlacementAction : GridAction
                 false, defaultCapacity: 100, maxSize: 300);
         }
 
-        public void Add(Vector3 pos, Quaternion rotation)
+        public void Display(List<Vector3Int> cells, Quaternion rotation, GridData grid)
         {
-            GameObject G = pool.Get();
-            G.transform.position = pos;
-            G.transform.rotation = rotation;
-            objects.Add(G.transform);
-        }
+            foreach (Transform transform in transforms)
+                pool.Release(transform.gameObject);
+            transforms.Clear();
 
-        public void Clear()
-        {
-            foreach(Transform placed in objects)
+            foreach (Vector3Int cell in cells)
             {
-                pool.Release(placed.gameObject);
+                Vector3 pos = grid.GetCellWorldPosition(cell.x, cell.z);
+
+                GameObject G = pool.Get();
+                G.transform.position = pos;
+                G.transform.rotation = rotation;
+                transforms.Add(G.transform);
             }
-            objects.Clear();
         }
 
-        public void Draw()
+        public void OnUpdate() { }
+
+        public void OnDestroy()
         {
-
+            GameObject.Destroy(poolParent.gameObject);
         }
 
-        public void ForEach(Action<Vector3> action)
-        {
-            foreach (Transform transform in objects)
-                action(transform.position);
-        }
-
-        public void ReserveSize(int sizeX, int sizeZ)
-        {
-
-        }
 
         private GameObject OnCreatePoolGameObject()
         {
@@ -346,10 +388,7 @@ public class SelectionPlacementAction : GridAction
             GameObject.Destroy(obj);
         }
 
-        public void OnDestroy()
-        {
-            GameObject.Destroy(poolParent.gameObject);
-        }
     }
 
 }
+
