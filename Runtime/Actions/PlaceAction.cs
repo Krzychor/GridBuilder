@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class PlaceAction : GridAction
@@ -28,6 +26,13 @@ public class PlaceAction : GridAction
 
     public void OnStart()
     {
+        if (placementData.building.placementValidator != null 
+            && placementData.building.placementValidator.CanStartPlacing(builder.grid, placementData.building) == false)
+        {
+            builder.CancelAction();
+            return;
+        }
+
         Quaternion rotation = placementData.rotatedGrid.GetRotation();
 
         GameObject model = placementData.building.model;
@@ -112,14 +117,13 @@ public class PlaceAction : GridAction
                 placementData.cell = builder.grid.GetCell(point);
                 placementData.isValid = true;
                 PlaceInCell(placementData.cell);
-
                 RenderAsValid(placementData.buildingPreview);
             }
             else
             {
                 Vector3Int cell = builder.grid.GetCell(point);
-                PlaceInCell(cell);
                 placementData.isValid = false;
+                PlaceInCell(cell);
                 RenderAsInvalid(placementData.buildingPreview);
             }
         }

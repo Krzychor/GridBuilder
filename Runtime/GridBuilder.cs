@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -57,7 +56,7 @@ public class GridBuilder : MonoBehaviour
     {
         CancelAction();
 
-        PlaceAction newAction = new PlaceAction(building, this);
+        PlaceAction newAction = new(building, this);
         currentAction = newAction;
         newAction.OnStart();
     }
